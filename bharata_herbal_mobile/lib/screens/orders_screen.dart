@@ -13,7 +13,7 @@ class OrdersScreen extends StatefulWidget {
 class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderStateMixin {
   final OrderService _service = OrderService();
   final _currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-  final _date = DateFormat('dd MMM yyyy', 'id_ID');
+  final _date = DateFormat('dd MMM yyyy');
   late TabController _tab;
   bool _isLoading = false;
   String? _error;

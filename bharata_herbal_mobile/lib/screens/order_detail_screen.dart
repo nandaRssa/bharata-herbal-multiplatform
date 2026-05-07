@@ -16,7 +16,7 @@ class OrderDetailScreen extends StatefulWidget {
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final OrderService _service = OrderService();
   final _currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-  final _date = DateFormat('dd MMM yyyy, HH:mm', 'id_ID');
+  final _date = DateFormat('dd MMM yyyy, HH:mm');
 
   Order? _order;
   bool _isLoading = true;
