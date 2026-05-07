@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/checkout_service.dart';
+import '../services/notification_service.dart';
 import '../models/address_model.dart';
 import '../providers/cart_provider.dart';
 import 'address_form_screen.dart';
@@ -78,9 +79,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       );
       if (!mounted) return;
       if (result['success'] == true) {
-        // Clear cart
         context.read<CartProvider>().clearLocal();
         final orderId = result['data']['order_id'] as int;
+        final orderNumber = result['data']['order_number']?.toString() ?? '#$orderId';
+        final total = _currency.format(_summary?.total ?? 0);
+
+        // 🔔 Push Notification: pesanan berhasil dibuat
+        await NotificationService().showCheckoutSuccessNotification(
+          orderNumber,
+          total,
+        );
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(

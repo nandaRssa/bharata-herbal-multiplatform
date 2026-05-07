@@ -34,11 +34,15 @@ dependencies:
   dio: ^5.4.3+1
   shared_preferences: ^2.2.3
   cached_network_image: ^3.3.1
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   intl: ^0.20.2
+
+  # Platform-specific mobile features
+  geolocator: ^13.0.2             # GPS/Geolocation
+  geocoding: ^3.0.0               # Reverse geocoding (koordinat → alamat)
+  image_picker: ^1.1.2            # Camera & Gallery picker
+  flutter_local_notifications: ^18.0.1  # Push Notification lokal
+  permission_handler: ^11.3.1     # Runtime permissions Android
 
 dev_dependencies:
   flutter_test:

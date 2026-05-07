@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/order_provider.dart';
 
@@ -25,10 +27,121 @@ class _ReviewScreenState extends State<ReviewScreen> {
   final _commentCtrl = TextEditingController();
   bool _isSubmitting = false;
 
+  // 📷 Image Picker
+  final ImagePicker _picker = ImagePicker();
+  final List<XFile> _selectedImages = [];
+  static const int _maxImages = 3;
+
   @override
   void dispose() {
     _commentCtrl.dispose();
     super.dispose();
+  }
+
+  /// Pilih foto dari kamera atau galeri
+  Future<void> _pickImage(ImageSource source) async {
+    if (_selectedImages.length >= _maxImages) {
+      _showSnack('Maksimal $_maxImages foto yang dapat diunggah');
+      return;
+    }
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
+      if (file != null) {
+        setState(() => _selectedImages.add(file));
+      }
+    } catch (e) {
+      _showSnack('Gagal memilih foto: $e');
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pilih Sumber Foto',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF1E3A0F),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _sourceCard(
+                      icon: Icons.camera_alt_rounded,
+                      label: 'Kamera',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.camera);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _sourceCard(
+                      icon: Icons.photo_library_rounded,
+                      label: 'Galeri',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.gallery);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sourceCard({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F5E9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF4A7C2C).withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 36, color: const Color(0xFF2D5016)),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2D5016),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -37,6 +150,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
       return;
     }
     setState(() => _isSubmitting = true);
+    // Note: foto review dikirim terpisah jika API mendukung upload
+    // Untuk sekarang, teks ulasan dikirim via OrderProvider
     final ok = await context.read<OrderProvider>().submitReview(
       widget.orderId,
       widget.productId,
@@ -58,7 +173,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: isError ? Colors.red.shade700 : const Color(0xFF2D5016),
+        backgroundColor:
+            isError ? Colors.red.shade700 : const Color(0xFF2D5016),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -97,7 +215,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         color: const Color(0xFFF3F4F6),
-                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey,
+                        ),
                       ),
                     ),
                   ),
@@ -115,7 +236,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
             // Rating Bintang
             const Text(
@@ -149,7 +270,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 );
               }),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               _ratingLabel(_rating),
               style: const TextStyle(
@@ -157,7 +278,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
 
             // Komentar
             const Text(
@@ -168,7 +289,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 color: Color(0xFF1E3A0F),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
                 color: const Color(0xFFF9FAFB),
@@ -177,10 +298,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
               ),
               child: TextField(
                 controller: _commentCtrl,
-                maxLines: 6,
+                maxLines: 5,
                 decoration: InputDecoration(
-                  hintText:
-                      'Bagikan pengalamanmu menggunakan produk ini...',
+                  hintText: 'Bagikan pengalamanmu menggunakan produk ini...',
                   hintStyle: TextStyle(
                     color: Colors.grey.shade400,
                     fontSize: 14,
@@ -188,6 +308,122 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.all(16),
                 ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ===== 📷 UPLOAD FOTO REVIEW =====
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Foto Produk (opsional)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF1E3A0F),
+                  ),
+                ),
+                Text(
+                  '${_selectedImages.length}/$_maxImages',
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Tambahkan foto produk untuk ulasan yang lebih berguna',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+
+            // Grid foto terpilih + tombol tambah
+            SizedBox(
+              height: 100,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  // Tombol tambah foto
+                  if (_selectedImages.length < _maxImages)
+                    GestureDetector(
+                      onTap: _showImageSourceSheet,
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF4A7C2C),
+                            style: BorderStyle.solid,
+                          ),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_a_photo_rounded,
+                              color: Color(0xFF4A7C2C),
+                              size: 28,
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'Tambah Foto',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF4A7C2C),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  // Preview foto terpilih
+                  ..._selectedImages.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final file = entry.value;
+                    return Stack(
+                      children: [
+                        Container(
+                          width: 100,
+                          height: 100,
+                          margin: const EdgeInsets.only(right: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            image: DecorationImage(
+                              image: FileImage(File(file.path)),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 14,
+                          child: GestureDetector(
+                            onTap: () => setState(
+                              () => _selectedImages.removeAt(index),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
               ),
             ),
             const SizedBox(height: 32),
@@ -231,7 +467,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
   }
 
   String _ratingLabel(int rating) {
-    const labels = ['', 'Sangat Buruk', 'Buruk', 'Cukup', 'Bagus', 'Sangat Bagus'];
+    const labels = [
+      '',
+      'Sangat Buruk',
+      'Buruk',
+      'Cukup',
+      'Bagus',
+      'Sangat Bagus',
+    ];
     return labels[rating];
   }
 }

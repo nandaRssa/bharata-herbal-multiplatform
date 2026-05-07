@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/address_provider.dart';
+import '../services/location_service.dart';
 
 class AddressFormScreen extends StatefulWidget {
   const AddressFormScreen({super.key});
@@ -20,6 +21,9 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
   final _postalCtrl = TextEditingController();
   bool _isDefault = false;
   bool _isLoading = false;
+  bool _isLocating = false; // loading state GPS
+
+  final LocationService _locationService = LocationService();
 
   @override
   void dispose() {
@@ -31,6 +35,54 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
     _provinceCtrl.dispose();
     _postalCtrl.dispose();
     super.dispose();
+  }
+
+  /// 📍 Auto-fill alamat menggunakan GPS
+  Future<void> _autoFillFromGPS() async {
+    setState(() => _isLocating = true);
+    try {
+      final result = await _locationService.getCurrentLocation();
+      if (result == null) return;
+
+      setState(() {
+        _streetCtrl.text = result.street.isNotEmpty
+            ? result.street
+            : result.fullAddress;
+        _cityCtrl.text = result.city;
+        _provinceCtrl.text = result.province;
+        _postalCtrl.text = result.postalCode;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Expanded(child: Text('Alamat berhasil diisi dari lokasi GPS!')),
+              ],
+            ),
+            backgroundColor: const Color(0xFF2D5016),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
   }
 
   Future<void> _save() async {
@@ -83,6 +135,70 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ===== TOMBOL GPS AUTO-FILL =====
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2D5016), Color(0xFF4A7C2C)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF2D5016).withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton.icon(
+                  onPressed: _isLocating ? null : _autoFillFromGPS,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: _isLocating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.my_location_rounded,
+                          color: Colors.white,
+                        ),
+                  label: Text(
+                    _isLocating
+                        ? 'Mendeteksi lokasi GPS...'
+                        : '📍 Gunakan Lokasi GPS Saat Ini',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Tekan tombol di atas untuk auto-fill alamat dari lokasi kamu sekarang',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 16),
+
+              // ===== FORM FIELDS =====
               _field(
                 controller: _labelCtrl,
                 label: 'Label Alamat',
@@ -153,6 +269,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                     v == null || v.isEmpty ? 'Wajib diisi' : null,
               ),
               const SizedBox(height: 20),
+
               // Jadikan Utama
               GestureDetector(
                 onTap: () => setState(() => _isDefault = !_isDefault),
@@ -175,7 +292,11 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: _isDefault
-                          ? const Icon(Icons.check, size: 14, color: Colors.white)
+                          ? const Icon(
+                              Icons.check,
+                              size: 14,
+                              color: Colors.white,
+                            )
                           : null,
                     ),
                     const SizedBox(width: 12),

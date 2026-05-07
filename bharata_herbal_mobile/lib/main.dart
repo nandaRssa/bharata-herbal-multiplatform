@@ -5,9 +5,13 @@ import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/address_provider.dart';
+import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Inisialisasi Push Notification lokal
+  await NotificationService().init();
   runApp(const MyApp());
 }
 
