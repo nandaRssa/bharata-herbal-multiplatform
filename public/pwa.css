@@ -1,0 +1,89 @@
+/* Bharata Herbal Admin - PWA Styles */
+
+.pwa-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #1f5233 0%, #2d8659 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  animation: slideInNotification 0.3s ease-out;
+  max-width: 400px;
+}
+
+.pwa-notification-update {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  bottom: 60px;
+}
+
+.pwa-notification-fade-out {
+  animation: slideOutNotification 0.3s ease-in forwards;
+}
+
+@keyframes slideInNotification {
+  from {
+    transform: translateX(410px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutNotification {
+  to {
+    transform: translateX(410px);
+    opacity: 0;
+  }
+}
+
+/* PWA Install Button */
+#pwaInstallBtn {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #1f5233 0%, #2d8659 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+#pwaInstallBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(31, 82, 51, 0.3);
+}
+
+#pwaInstallBtn:active {
+  transform: translateY(0);
+}
+
+#pwaInstallBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 768px) {
+  .pwa-notification {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: calc(100vw - 24px);
+  }
+
+  #pwaInstallBtn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
