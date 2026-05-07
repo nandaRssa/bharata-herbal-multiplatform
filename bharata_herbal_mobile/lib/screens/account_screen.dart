@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import 'main_screen.dart';
+import '../providers/cart_provider.dart';
+import 'orders_screen.dart';
+import 'address_screen.dart';
+import 'profile_edit_screen.dart';
+import 'login_screen.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const String userName = "Sobat Sehat";
-    const String userEmail = "sobat@bharataherbal.com";
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -19,6 +23,7 @@ class AccountScreen extends StatelessWidget {
           physics: const ClampingScrollPhysics(),
           child: Column(
             children: [
+              // Header
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(24, 70, 24, 40),
@@ -35,113 +40,161 @@ class AccountScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 45,
                       backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Color(0xFF4A7C2C),
+                      child: Text(
+                        user != null && user.name.isNotEmpty
+                            ? user.name[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A7C2C),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      userName,
-                      style: TextStyle(
-                        fontSize: 24,
+                    Text(
+                      user?.name ?? 'Sobat Sehat',
+                      style: const TextStyle(
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      userEmail,
-                      style: TextStyle(fontSize: 14, color: Colors.white70),
+                      user?.email ?? 'Silakan login untuk akses penuh',
+                      style: const TextStyle(fontSize: 13, color: Colors.white70),
                     ),
+                    if (user?.phone != null && user!.phone.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        user.phone,
+                        style: const TextStyle(fontSize: 13, color: Colors.white60),
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 30),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Aktivitas Saya',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E3A0F),
-                      ),
+
+              if (!auth.isLoggedIn)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
                     ),
-                    const SizedBox(height: 16),
-                    _buildMenuTile(Icons.shopping_bag_outlined, 'Pesanan Saya'),
-                    _buildMenuTile(
-                      Icons.favorite_border_rounded,
-                      'Wishlist Produk',
-                    ),
-                    _buildMenuTile(
-                      Icons.location_on_outlined,
-                      'Alamat Pengiriman',
-                    ),
-                    const SizedBox(height: 30),
-                    const Text(
-                      'Pengaturan',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E3A0F),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildMenuTile(
-                      Icons.shield_outlined,
-                      'Keamanan & Password',
-                    ),
-                    _buildMenuTile(Icons.help_outline_rounded, 'Pusat Bantuan'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 40),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      await Provider.of<AuthProvider>(
-                        context,
-                        listen: false,
-                      ).logout();
-                      if (!context.mounted) return;
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => MainScreen()),
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Colors.redAccent),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2D5016),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 52),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    icon: const Icon(
-                      Icons.logout_rounded,
-                      color: Colors.redAccent,
-                    ),
-                    label: const Text(
-                      'Keluar Akun',
+                    child: const Text(
+                      'Login / Daftar',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Aktivitas Saya',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E3A0F),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _menuTile(
+                        icon: Icons.shopping_bag_outlined,
+                        title: 'Pesanan Saya',
+                        subtitle: 'Lihat status dan riwayat pesanan',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const OrdersScreen()),
+                        ),
+                      ),
+                      _menuTile(
+                        icon: Icons.location_on_outlined,
+                        title: 'Alamat Pengiriman',
+                        subtitle: 'Kelola alamat pengiriman',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AddressScreen()),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Pengaturan Akun',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E3A0F),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _menuTile(
+                        icon: Icons.person_outline_rounded,
+                        title: 'Edit Profil',
+                        subtitle: 'Ubah nama, email, dan nomor HP',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ProfileEditScreen()),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 40),
+
+              if (auth.isLoggedIn)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await context.read<AuthProvider>().logout();
+                        if (!context.mounted) return;
+                        context.read<CartProvider>().clearLocal();
+                        // Kembali ke MainScreen (tab pertama)
+                        Navigator.popUntil(context, (r) => r.isFirst);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                      label: const Text(
+                        'Keluar Akun',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
               const SizedBox(height: 40),
             ],
           ),
@@ -150,7 +203,12 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuTile(IconData icon, String title) {
+  Widget _menuTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -180,8 +238,12 @@ class AccountScreen extends StatelessWidget {
             color: Color(0xFF374151),
           ),
         ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
         trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }

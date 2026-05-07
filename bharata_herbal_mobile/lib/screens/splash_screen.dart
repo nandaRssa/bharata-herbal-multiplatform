@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import 'main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -8,24 +10,49 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animCtrl;
+  late Animation<double> _fadeAnim;
+  late Animation<double> _scaleAnim;
+
   @override
   void initState() {
     super.initState();
-    _navigateToLogin();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _animCtrl, curve: Curves.easeIn),
+    );
+    _scaleAnim = Tween<double>(begin: 0.7, end: 1).animate(
+      CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutBack),
+    );
+    _animCtrl.forward();
+    _init();
   }
 
-  // Pisahkan fungsinya agar lebih rapi dan aman dari peringatan linter
-  Future<void> _navigateToLogin() async {
-    await Future.delayed(const Duration(milliseconds: 2500));
+  Future<void> _init() async {
+    // Cek token login
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    await context.read<AuthProvider>().checkLoginStatus();
 
-    // Gunakan properti mounted milik State
+    // Tunggu minimal agar splash terlihat
+    await Future.delayed(const Duration(milliseconds: 1600));
     if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const MainScreen()),
     );
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -35,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen> {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF2D5016), Color(0xFF4A7C2C)],
+            colors: [Color(0xFF1A3A0A), Color(0xFF2D5016), Color(0xFF4A7C2C)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -43,32 +70,51 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(
-                Icons.spa_rounded,
-                color: Colors.white,
-                size: 80,
+            FadeTransition(
+              opacity: _fadeAnim,
+              child: ScaleTransition(
+                scale: _scaleAnim,
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: const Icon(
+                        Icons.spa_rounded,
+                        color: Colors.white,
+                        size: 80,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Bharata Herbal',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '100% Alami dan Terpercaya',
+                      style: TextStyle(fontSize: 14, color: Colors.white70),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'Bharata Herbal',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                letterSpacing: 1.2,
+            const SizedBox(height: 80),
+            const SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(
+                color: Colors.white54,
+                strokeWidth: 2.5,
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '100% Alami dan Terpercaya',
-              style: TextStyle(fontSize: 14, color: Colors.white70),
             ),
           ],
         ),

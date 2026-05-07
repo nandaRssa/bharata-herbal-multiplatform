@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
+import 'main_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,10 +14,21 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +49,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Ikon / Logo
+              // Logo
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -54,8 +67,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Teks Sambutan
               const Text(
                 'Daftar Akun',
                 style: TextStyle(
@@ -75,7 +86,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 30),
 
-              // Form Nama
               _buildTextField(
                 controller: _nameController,
                 hintText: 'Nama Lengkap',
@@ -83,7 +93,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Form Email
               _buildTextField(
                 controller: _emailController,
                 hintText: 'Email',
@@ -92,25 +101,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Form Password
+              _buildTextField(
+                controller: _phoneController,
+                hintText: 'Nomor HP (08xxxxxxxxxx)',
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+
               _buildPasswordField(
                 controller: _passwordController,
                 hintText: 'Password',
                 isObscure: _obscurePassword,
-                onToggle: () {
-                  setState(() => _obscurePassword = !_obscurePassword);
-                },
+                onToggle: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
               const SizedBox(height: 16),
 
-              // Form Konfirmasi Password
               _buildPasswordField(
                 controller: _confirmPasswordController,
                 hintText: 'Konfirmasi Password',
                 isObscure: _obscureConfirm,
-                onToggle: () {
-                  setState(() => _obscureConfirm = !_obscureConfirm);
-                },
+                onToggle: () =>
+                    setState(() => _obscureConfirm = !_obscureConfirm),
               ),
               const SizedBox(height: 30),
 
@@ -123,14 +136,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: auth.isLoading
                           ? null
                           : () async {
-                              final name = _nameController.text;
-                              final email = _emailController.text;
+                              final name = _nameController.text.trim();
+                              final email = _emailController.text.trim();
+                              final phone = _phoneController.text.trim();
                               final password = _passwordController.text;
-                              final confirm = _confirmPasswordController.text;
+                              final confirm =
+                                  _confirmPasswordController.text;
 
-                              // 1. Cek kalau ada form yang kosong
                               if (name.isEmpty ||
                                   email.isEmpty ||
+                                  phone.isEmpty ||
                                   password.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -142,7 +157,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return;
                               }
 
-                              // 2. Cek kalau password dan konfirmasinya beda
                               if (password != confirm) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -154,31 +168,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return;
                               }
 
-                              // 3. Panggil API ke Laravel
-                              bool success = await auth.register(
+                              final success = await auth.register(
                                 name,
                                 email,
+                                phone,
                                 password,
                                 confirm,
                               );
                               if (!context.mounted) return;
 
-                              // 4. Beri respon ke user
                               if (success) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Daftar Berhasil! 🎉 Silakan Masuk.',
-                                    ),
+                                context.read<CartProvider>().loadCart();
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const MainScreen(),
                                   ),
+                                  (route) => false,
                                 );
-                                Navigator.pop(context);
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                      'Gagal daftar. E-mail sudah dipakai atau API error.',
+                                      'Gagal daftar. E-mail mungkin sudah terdaftar.',
                                     ),
+                                    backgroundColor: Colors.red,
                                   ),
                                 );
                               }
@@ -214,7 +228,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Link Login
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),

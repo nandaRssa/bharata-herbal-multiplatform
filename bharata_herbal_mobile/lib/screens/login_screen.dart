@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
 import 'main_screen.dart';
 import 'register_screen.dart';
 
@@ -181,11 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               if (!context.mounted) return;
 
                               if (success) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Login berhasil!'),
-                                  ),
-                                );
+                                context.read<CartProvider>().loadCart();
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(

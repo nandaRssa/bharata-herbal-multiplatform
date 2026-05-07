@@ -1,43 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/product_provider.dart';
+import '../providers/cart_provider.dart';
 
 import 'home_screen.dart';
 import 'catalog_screen.dart';
+import 'cart_screen.dart';
 import 'account_screen.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final int initialIndex;
+
+  const MainScreen({super.key, this.initialIndex = 0});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ProductProvider>(context, listen: false).loadInitialData();
+      context.read<ProductProvider>().loadInitialData();
+      context.read<CartProvider>().loadCart();
     });
 
-    _pages = [const HomeScreen(), const CatalogScreen(), const AccountScreen()];
+    _pages = const [
+      HomeScreen(),
+      CatalogScreen(),
+      CartScreen(),
+      AccountScreen(),
+    ];
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -61,15 +70,15 @@ class _MainScreenState extends State<MainScreen> {
           onTap: _onItemTapped,
           type: BottomNavigationBarType.fixed,
           elevation: 0,
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Padding(
                 padding: EdgeInsets.only(bottom: 4),
                 child: Icon(Icons.home_filled),
               ),
               label: 'Beranda',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Padding(
                 padding: EdgeInsets.only(bottom: 4),
                 child: Icon(Icons.storefront_rounded),
@@ -77,6 +86,25 @@ class _MainScreenState extends State<MainScreen> {
               label: 'Katalog',
             ),
             BottomNavigationBarItem(
+              icon: Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Consumer<CartProvider>(
+                  builder: (_, cart, __) {
+                    final count = cart.cart?.totalItems ?? 0;
+                    return Badge(
+                      isLabelVisible: count > 0,
+                      label: Text(
+                        count > 9 ? '9+' : '$count',
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                      child: const Icon(Icons.shopping_cart_outlined),
+                    );
+                  },
+                ),
+              ),
+              label: 'Keranjang',
+            ),
+            const BottomNavigationBarItem(
               icon: Padding(
                 padding: EdgeInsets.only(bottom: 4),
                 child: Icon(Icons.person_rounded),
