@@ -16,8 +16,8 @@ class OrderItemResource extends JsonResource
             'product_name'    => $this->product?->name,
             'product_image'   => $this->product?->image ? asset('storage/' . $this->product->image) : null,
             'quantity'        => $this->quantity,
-            'unit_price'      => (int) $this->unit_price,
-            'subtotal'        => (int) ($this->quantity * $this->unit_price),
+            'unit_price'      => (int) $this->price,          // DB kolom: price
+            'subtotal'        => (int) ($this->quantity * $this->price),
             'created_at'      => $this->created_at->toISOString(),
         ];
     }

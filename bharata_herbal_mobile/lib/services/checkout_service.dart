@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'base_service.dart';
 import '../models/address_model.dart';
 import '../models/cart_model.dart';
@@ -49,6 +50,33 @@ class CheckoutService extends BaseService {
     final response = await dio.get('/checkout', options: options);
     final d = response.data['data'];
 
+    // payment_methods bisa berupa JSON string atau array
+    final rawMethods = d['payment_methods'];
+    List<String> paymentMethods;
+    if (rawMethods is List) {
+      paymentMethods = List<String>.from(rawMethods);
+    } else if (rawMethods is String) {
+      try {
+        final decoded = (rawMethods.isNotEmpty)
+            ? List<String>.from(jsonDecode(rawMethods))
+            : <String>[];
+        paymentMethods = decoded;
+      } catch (_) {
+        paymentMethods = [];
+      }
+    } else {
+      paymentMethods = [];
+    }
+
+    // bank_accounts — filter only valid keys
+    final rawBanks = d['bank_accounts'] as List<dynamic>? ?? [];
+    final bankAccounts = rawBanks.map<Map<String, dynamic>>((b) {
+      final map = Map<String, dynamic>.from(b as Map);
+      // Buang key yang aneh / bukan kolom DB asli
+      map.removeWhere((k, v) => k.contains('"') || k.contains('notes'));
+      return map;
+    }).toList();
+
     return CheckoutSummary(
       cart: Cart.fromJson(d['cart']),
       selectedItems: List<Map<String, dynamic>>.from(
@@ -60,8 +88,8 @@ class CheckoutService extends BaseService {
       defaultAddress: d['default_address'] != null
           ? Address.fromJson(d['default_address'])
           : null,
-      paymentMethods: List<String>.from(d['payment_methods'] ?? []),
-      bankAccounts: List<Map<String, dynamic>>.from(d['bank_accounts'] ?? []),
+      paymentMethods: paymentMethods,
+      bankAccounts: bankAccounts,
       subtotal: double.tryParse(d['subtotal'].toString()) ?? 0,
       shippingCost: double.tryParse(d['shipping_cost'].toString()) ?? 0,
       total: double.tryParse(d['total'].toString()) ?? 0,

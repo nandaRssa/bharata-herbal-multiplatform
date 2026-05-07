@@ -105,7 +105,7 @@ class CheckoutController extends Controller
             $order->items()->create([
                 'product_id' => $item->product_id,
                 'quantity'   => $item->quantity,
-                'unit_price' => $item->product->effective_price,
+                'price'      => $item->product->effective_price,  // kolom DB: price
             ]);
         }
 
