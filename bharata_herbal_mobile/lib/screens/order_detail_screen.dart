@@ -78,34 +78,115 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<String?> _showCancelDialog() async {
-    final ctrl = TextEditingController();
+    // Pilihan alasan preset
+    const presetReasons = [
+      'Berubah pikiran / tidak jadi beli',
+      'Menemukan harga lebih murah',
+      'Salah pilih produk atau jumlah',
+      'Ingin mengubah alamat pengiriman',
+      'Pesanan duplikat / tidak sengaja',
+      'Lainnya...',
+    ];
+
+    String? selected = presetReasons.first;
+    final customCtrl = TextEditingController();
+    bool showCustom = false;
+
     return showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Batalkan Pesanan?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Masukkan alasan pembatalan (opsional):',
-            style: TextStyle(color: Colors.grey, fontSize: 13)),
-          const SizedBox(height: 12),
-          TextField(
-            controller: ctrl,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'Alasan pembatalan...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.all(12),
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(children: [
+            Icon(Icons.cancel_outlined, color: Colors.red, size: 22),
+            SizedBox(width: 8),
+            Text('Batalkan Pesanan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ]),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Pilih alasan pembatalan:', style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const SizedBox(height: 8),
+              ...presetReasons.map((reason) => InkWell(
+                onTap: () => setDlgState(() {
+                  selected = reason;
+                  showCustom = reason == 'Lainnya...';
+                }),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: selected == reason ? const Color(0xFFFEF2F2) : Colors.transparent,
+                    border: Border.all(color: selected == reason ? Colors.red.shade300 : Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(children: [
+                    Radio<String>(
+                      value: reason,
+                      groupValue: selected,
+                      activeColor: Colors.red,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                      onChanged: (v) => setDlgState(() {
+                        selected = v;
+                        showCustom = v == 'Lainnya...';
+                      }),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(child: Text(reason,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: selected == reason ? FontWeight.w600 : FontWeight.normal,
+                        color: selected == reason ? Colors.red.shade700 : Colors.black87,
+                      ))),
+                  ]),
+                ),
+              )),
+              if (showCustom) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: customCtrl,
+                  maxLines: 2,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Tuliskan alasan lainnya...',
+                    hintStyle: const TextStyle(fontSize: 13),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.all(12),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                ),
+              ],
+            ]),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.pop(ctx, null),
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.grey),
+              child: const Text('Tutup'),
             ),
-          ),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, null), child: const Text('Tutup')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            child: const Text('Ya, Batalkan'),
-          ),
-        ],
+            ElevatedButton(
+              onPressed: () {
+                final reason = showCustom
+                    ? (customCtrl.text.trim().isEmpty ? 'Lainnya' : customCtrl.text.trim())
+                    : (selected ?? presetReasons.first);
+                Navigator.pop(ctx, reason);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Ya, Batalkan'),
+            ),
+          ],
+        ),
       ),
     );
   }

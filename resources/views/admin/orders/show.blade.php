@@ -89,6 +89,12 @@
                         <p class="text-gray-700">{{ $order->notes }}</p>
                     </div>
                     @endif
+                    @if ($order->cancel_reason)
+                    <div class="pt-2 border-t border-red-100 bg-red-50 -mx-6 px-6 pb-2 rounded-b-2xl">
+                        <span class="text-red-500 block mb-1 text-xs font-semibold uppercase tracking-wide">⚠ Alasan Pembatalan (dari customer)</span>
+                        <p class="text-red-700 font-medium">{{ $order->cancel_reason }}</p>
+                    </div>
+                    @endif
                 </div>
             </div>
 
