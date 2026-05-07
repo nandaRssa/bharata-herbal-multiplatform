@@ -2,8 +2,22 @@ import 'base_service.dart';
 import '../models/address_model.dart';
 import '../models/cart_model.dart';
 
+/// Payment method yang ditampilkan di UI (user-friendly)
+enum PaymentMethod {
+  cod('cash_on_delivery', 'Bayar di Tempat (COD)', '💵'),
+  transfer('transfer', 'Transfer Bank', '🏦'),
+  ewallet('transfer', 'E-Wallet (GoPay/OVO/Dana)', '📱'); // backend maps to transfer
+
+  final String backendValue; // nilai yang dikirim ke API
+  final String label;
+  final String emoji;
+
+  const PaymentMethod(this.backendValue, this.label, this.emoji);
+}
+
 class CheckoutSummary {
   final Cart cart;
+  final List<Map<String, dynamic>> selectedItems;
   final List<Address> addresses;
   final Address? defaultAddress;
   final List<String> paymentMethods;
@@ -16,6 +30,7 @@ class CheckoutSummary {
 
   CheckoutSummary({
     required this.cart,
+    required this.selectedItems,
     required this.addresses,
     this.defaultAddress,
     required this.paymentMethods,
@@ -36,14 +51,15 @@ class CheckoutService extends BaseService {
 
     return CheckoutSummary(
       cart: Cart.fromJson(d['cart']),
-      addresses:
-          (d['addresses'] as List<dynamic>? ?? [])
-              .map((a) => Address.fromJson(a))
-              .toList(),
-      defaultAddress:
-          d['default_address'] != null
-              ? Address.fromJson(d['default_address'])
-              : null,
+      selectedItems: List<Map<String, dynamic>>.from(
+        d['selected_items'] ?? [],
+      ),
+      addresses: (d['addresses'] as List<dynamic>? ?? [])
+          .map((a) => Address.fromJson(a))
+          .toList(),
+      defaultAddress: d['default_address'] != null
+          ? Address.fromJson(d['default_address'])
+          : null,
       paymentMethods: List<String>.from(d['payment_methods'] ?? []),
       bankAccounts: List<Map<String, dynamic>>.from(d['bank_accounts'] ?? []),
       subtotal: double.tryParse(d['subtotal'].toString()) ?? 0,
@@ -55,17 +71,17 @@ class CheckoutService extends BaseService {
     );
   }
 
-  Future<Map<String, dynamic>> placeOrder(
-    int addressId,
-    String paymentMethod,
-    String notes,
-  ) async {
+  Future<Map<String, dynamic>> placeOrder({
+    required int addressId,
+    required PaymentMethod paymentMethod,
+    String notes = '',
+  }) async {
     final options = await authOptions();
     final response = await dio.post(
       '/checkout',
       data: {
         'address_id': addressId,
-        'payment_method': paymentMethod,
+        'payment_method': paymentMethod.backendValue, // mapping ke backend value
         'notes': notes,
       },
       options: options,

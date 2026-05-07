@@ -1,33 +1,122 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../providers/order_provider.dart';
-import '../providers/cart_provider.dart';
+import '../services/order_service.dart';
 import '../models/order_model.dart';
+import '../models/address_model.dart';
 import 'review_screen.dart';
+import 'payment_instruction_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final int orderId;
-
   const OrderDetailScreen({super.key, required this.orderId});
-
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
-  final _currency = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp ',
-    decimalDigits: 0,
-  );
+  final OrderService _service = OrderService();
+  final _currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final _date = DateFormat('dd MMM yyyy, HH:mm', 'id_ID');
+
+  Order? _order;
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<OrderProvider>().loadOrderDetail(widget.orderId);
-    });
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final o = await _service.getOrderDetail(widget.orderId);
+      setState(() { _order = o; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = 'Gagal memuat detail pesanan'; _isLoading = false; });
+    }
+  }
+
+  Future<void> _cancelOrder() async {
+    final reason = await _showCancelDialog();
+    if (reason == null) return;
+    final ok = await _service.cancelOrder(widget.orderId, reason);
+    if (!mounted) return;
+    if (ok) {
+      _snack('Pesanan berhasil dibatalkan');
+      _load();
+    } else {
+      _snack('Gagal membatalkan pesanan', isError: true);
+    }
+  }
+
+  Future<void> _buyAgain() async {
+    final ok = await _service.buyAgain(widget.orderId);
+    if (!mounted) return;
+    if (ok) {
+      _snack('Produk ditambahkan ke keranjang!');
+    } else {
+      _snack('Gagal menambahkan ke keranjang', isError: true);
+    }
+  }
+
+  Future<void> _payNow() async {
+    try {
+      final data = await _service.payNow(widget.orderId);
+      if (!mounted) return;
+      // Arahkan ke halaman instruksi pembayaran dengan data bank
+      final bankDetails = data['payment']?['bank_transfer_details'];
+      final List<Map<String, dynamic>> banks = bankDetails != null
+          ? [Map<String, dynamic>.from(bankDetails)]
+          : [];
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => PaymentInstructionScreen(order: _order!, bankAccounts: banks)));
+    } catch (e) {
+      _snack('Gagal memuat info pembayaran', isError: true);
+    }
+  }
+
+  Future<String?> _showCancelDialog() async {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Batalkan Pesanan?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Masukkan alasan pembatalan (opsional):',
+            style: TextStyle(color: Colors.grey, fontSize: 13)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: ctrl,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Alasan pembatalan...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, null), child: const Text('Tutup')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, ctrl.text.trim()),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Ya, Batalkan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _snack(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: isError ? Colors.red.shade700 : const Color(0xFF2D5016),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   @override
@@ -35,626 +124,250 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text(
-          'Detail Pesanan',
-          style: TextStyle(
-            color: Color(0xFF1E3A0F),
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
+        title: Text(_order != null ? _order!.orderNumber : 'Detail Pesanan',
+          style: const TextStyle(color: Color(0xFF1E3A0F), fontWeight: FontWeight.bold, fontSize: 16)),
         backgroundColor: Colors.white,
         elevation: 0.5,
         iconTheme: const IconThemeData(color: Color(0xFF1E3A0F)),
       ),
-      body: Consumer<OrderProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2D5016)),
-            );
-          }
-          final order = provider.selectedOrder;
-          if (order == null) {
-            return const Center(child: Text('Pesanan tidak ditemukan.'));
-          }
-          return RefreshIndicator(
-            color: const Color(0xFF2D5016),
-            onRefresh: () =>
-                provider.loadOrderDetail(widget.orderId),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildStatusCard(order),
-                const SizedBox(height: 12),
-                _buildItemsCard(order),
-                const SizedBox(height: 12),
-                _buildAddressCard(order),
-                const SizedBox(height: 12),
-                _buildPriceCard(order),
-                const SizedBox(height: 12),
-                if (order.trackingNumber != null)
-                  _buildTrackingCard(order),
-                const SizedBox(height: 12),
-                _buildActionsCard(context, order, provider),
-                const SizedBox(height: 24),
-              ],
-            ),
-          );
-        },
-      ),
+      body: _isLoading ? const Center(child: CircularProgressIndicator(color: Color(0xFF2D5016)))
+          : _error != null ? _buildError()
+          : _buildBody(),
     );
   }
 
-  Widget _buildStatusCard(Order order) {
-    final colors = {
-      'pending': Colors.grey.shade600,
-      'unpaid': Colors.orange.shade700,
-      'processing': Colors.blue.shade700,
-      'shipped': Colors.indigo.shade700,
-      'completed': const Color(0xFF2D5016),
-      'cancelled': Colors.red.shade700,
-    };
-    final color = colors[order.status] ?? Colors.grey;
+  Widget _buildError() => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+    const Icon(Icons.error_outline, size: 60, color: Colors.red),
+    const SizedBox(height: 12),
+    Text(_error!, style: const TextStyle(color: Colors.grey)),
+    const SizedBox(height: 16),
+    ElevatedButton(onPressed: _load,
+      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2D5016), foregroundColor: Colors.white),
+      child: const Text('Coba Lagi')),
+  ]));
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                order.orderNumber,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  order.statusLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _formatDate(order.createdAt),
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
-          ),
-          if (order.status == 'unpaid' && order.paymentDeadline != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Bayar sebelum: ${_formatDate(order.paymentDeadline!)}',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-          ],
-          if (order.cancelReason != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Alasan: ${order.cancelReason}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ],
-        ],
-      ),
+  Widget _buildBody() {
+    final o = _order!;
+    return RefreshIndicator(
+      color: const Color(0xFF2D5016),
+      onRefresh: _load,
+      child: ListView(padding: const EdgeInsets.all(16), children: [
+        // ─── Status Banner ─────────────────────────────────────────
+        _statusBanner(o),
+        const SizedBox(height: 12),
+
+        // ─── Status Timeline ──────────────────────────────────────
+        if (!o.isCancelled) ...[_timelineCard(o), const SizedBox(height: 12)],
+
+        // ─── Informasi Pesanan ─────────────────────────────────────
+        _card('Informasi Pesanan', child: Column(children: [
+          _row('No. Pesanan', o.orderNumber),
+          _row('Tanggal', _safeDate(o.createdAt)),
+          if (o.notes != null && o.notes!.isNotEmpty) _row('Catatan', o.notes!),
+          if (o.courierName != null) _row('Kurir', o.courierName!),
+          if (o.trackingNumber != null) _row('No. Resi', o.trackingNumber!),
+          if (o.cancelReason != null && o.cancelReason!.isNotEmpty) _row('Alasan Batal', o.cancelReason!, valueColor: Colors.red),
+        ])),
+        const SizedBox(height: 12),
+
+        // ─── Produk ────────────────────────────────────────────────
+        _productsCard(o),
+        const SizedBox(height: 12),
+
+        // ─── Ringkasan Harga ───────────────────────────────────────
+        _priceCard(o),
+        const SizedBox(height: 12),
+
+        // ─── Alamat Pengiriman ─────────────────────────────────────
+        if (o.address != null) ...[_addressCard(o.address!), const SizedBox(height: 12)],
+
+        // ─── Informasi Pembayaran ──────────────────────────────────
+        if (o.payment != null) ...[_paymentCard(o.payment!), const SizedBox(height: 12)],
+
+        // ─── Action Buttons ────────────────────────────────────────
+        _actionsCard(o),
+        const SizedBox(height: 32),
+      ]),
     );
   }
 
-  Widget _buildItemsCard(Order order) {
-    return _card(
-      title: 'Produk Dipesan',
-      icon: Icons.shopping_bag_outlined,
-      child: Column(
-        children: order.items
-            .map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: SizedBox(
-                        width: 64,
-                        height: 64,
-                        child: Image.network(
-                          item.productImage,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: const Color(0xFFF3F4F6),
-                            child: const Icon(
-                              Icons.image_not_supported,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.productName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${item.quantity}x ${_currency.format(item.unitPrice)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _currency.format(item.subtotal),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2D5016),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Review button per item
-                    if (order.status == 'completed' && order.canReview)
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ReviewScreen(
-                              orderId: order.id,
-                              productId: item.productId,
-                              productName: item.productName,
-                              productImage: item.productImage,
-                            ),
-                          ),
-                        ).then((_) => context
-                            .read<OrderProvider>()
-                            .loadOrderDetail(widget.orderId)),
-                        child: const Text(
-                          'Ulas',
-                          style: TextStyle(
-                            color: Color(0xFF2D5016),
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
+  Widget _statusBanner(Order o) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(o.statusColor), Color(o.statusColor).withValues(alpha: 0.7)],
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-    );
-  }
-
-  Widget _buildAddressCard(Order order) {
-    if (order.address == null) return const SizedBox.shrink();
-    final addr = order.address!;
-    return _card(
-      title: 'Alamat Pengiriman',
-      icon: Icons.location_on_outlined,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2D5016),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  addr.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                addr.recipientName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Row(children: [
+      Text(o.statusIcon, style: const TextStyle(fontSize: 32)),
+      const SizedBox(width: 14),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(o.statusLabel, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 4),
+        Text(_statusDescription(o.status), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        if (o.needsPayment && o.paymentDeadline != null) ...[
           const SizedBox(height: 6),
-          Text(addr.fullAddress, style: const TextStyle(fontSize: 13, height: 1.4)),
+          Text('Bayar sebelum: ${_safeDate(o.paymentDeadline!)}',
+            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+        ],
+      ])),
+    ]),
+  );
+
+  Widget _timelineCard(Order o) => _card('Status Pesanan', child: Column(children: [
+    ...o.statusTimeline.asMap().entries.map((entry) {
+      final i = entry.key;
+      final step = entry.value;
+      final isLast = i == o.statusTimeline.length - 1;
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Column(children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: 24, height: 24,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: step.isCompleted ? const Color(0xFF2D5016) : Colors.grey.shade300,
+              border: step.isCurrent ? Border.all(color: const Color(0xFF2D5016), width: 3) : null,
+            ),
+            child: step.isCompleted
+                ? const Icon(Icons.check, color: Colors.white, size: 14)
+                : null,
+          ),
+          if (!isLast)
+            Container(width: 2, height: 30, color: step.isCompleted ? const Color(0xFF2D5016) : Colors.grey.shade300),
+        ]),
+        const SizedBox(width: 12),
+        Padding(padding: const EdgeInsets.only(top: 3),
+          child: Text(step.label,
+            style: TextStyle(
+              fontWeight: step.isCurrent ? FontWeight.bold : FontWeight.normal,
+              color: step.isCompleted ? const Color(0xFF2D5016) : Colors.grey,
+              fontSize: 13,
+            ))),
+      ]);
+    }),
+  ]));
+
+  Widget _productsCard(Order o) => _card('Produk (${o.items.length} item)', child: Column(
+    children: o.items.map((item) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(children: [
+        ClipRRect(borderRadius: BorderRadius.circular(8),
+          child: SizedBox(width: 60, height: 60, child: Image.network(item.productImage, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(color: const Color(0xFFF3F4F6), child: const Icon(Icons.image_not_supported, color: Colors.grey))))),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(item.productName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 4),
-          Text(addr.phone, style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        ],
-      ),
-    );
+          Text('${item.quantity}x ${_currency.format(item.unitPrice)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ])),
+        Text(_currency.format(item.subtotal), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D5016))),
+      ]),
+    )).toList(),
+  ));
+
+  Widget _priceCard(Order o) => _card('Ringkasan Harga', child: Column(children: [
+    _row('Subtotal Produk', _currency.format(o.subtotal)),
+    _row('Ongkos Kirim', _currency.format(o.shippingCost)),
+    const Divider(height: 20),
+    _row('Total Pembayaran', _currency.format(o.totalPrice), bold: true),
+  ]));
+
+  Widget _addressCard(Address address) => _card('Alamat Pengiriman', child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Row(children: [
+      Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: const Color(0xFF2D5016), borderRadius: BorderRadius.circular(6)),
+        child: Text(address.label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))),
+      const SizedBox(width: 8),
+      Text(address.recipientName, style: const TextStyle(fontWeight: FontWeight.bold)),
+    ]),
+    const SizedBox(height: 6),
+    Text(address.fullAddress, style: const TextStyle(fontSize: 13, height: 1.5, color: Colors.black87)),
+    const SizedBox(height: 4),
+    Text(address.phone, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+  ]));
+
+  Widget _paymentCard(OrderPayment payment) => _card('Informasi Pembayaran', child: Column(children: [
+    _row('Metode', payment.methodLabel),
+    _row('Status', payment.status == 'paid' ? '✅ Lunas' : '⏳ Menunggu'),
+    _row('Jumlah', _currency.format(payment.amount)),
+    if (payment.paidAt != null) _row('Dibayar', _safeDate(payment.paidAt!)),
+  ]));
+
+  Widget _actionsCard(Order o) => _card('Aksi Pesanan', child: Column(children: [
+    if (o.needsPayment) ...[
+      _primaryBtn('💳  Bayar Sekarang', Colors.red, _payNow),
+      const SizedBox(height: 8),
+    ],
+    if (o.canBeCancelled) ...[
+      _outlineBtn('Batalkan Pesanan', Colors.red, _cancelOrder),
+      const SizedBox(height: 8),
+    ],
+    if (o.isCompleted && o.canReview) ...[
+      _primaryBtn('⭐  Beri Ulasan', const Color(0xFF2D5016), () {
+        if (o.items.isNotEmpty) {
+          final item = o.items.first;
+          Navigator.push(context, MaterialPageRoute(builder: (_) => ReviewScreen(
+            orderId: o.id, productId: item.productId,
+            productName: item.productName, productImage: item.productImage)));
+        }
+      }),
+      const SizedBox(height: 8),
+    ],
+    if (o.isCompleted || o.isCancelled) ...[
+      _outlineBtn('🔄  Pesan Lagi', const Color(0xFF2D5016), _buyAgain),
+    ],
+  ]));
+
+  Widget _primaryBtn(String label, Color color, VoidCallback onTap) =>
+    SizedBox(width: double.infinity,
+      child: ElevatedButton(onPressed: onTap,
+        style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))));
+
+  Widget _outlineBtn(String label, Color color, VoidCallback onTap) =>
+    SizedBox(width: double.infinity,
+      child: OutlinedButton(onPressed: onTap,
+        style: OutlinedButton.styleFrom(foregroundColor: color, side: BorderSide(color: color),
+          padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))));
+
+  Widget _card(String title, {required Widget child}) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E3A0F))),
+      const SizedBox(height: 12),
+      child,
+    ]),
+  );
+
+  Widget _row(String label, String value, {bool bold = false, Color? valueColor}) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+      Flexible(child: Text(value, textAlign: TextAlign.end,
+        style: TextStyle(fontWeight: bold ? FontWeight.w900 : FontWeight.w600,
+          fontSize: bold ? 16 : 13, color: valueColor ?? (bold ? const Color(0xFF2D5016) : const Color(0xFF1F2937))))),
+    ]),
+  );
+
+  String _statusDescription(String s) {
+    const desc = {
+      'unpaid': 'Selesaikan pembayaran untuk melanjutkan',
+      'pending': 'Pesanan sedang menunggu konfirmasi toko',
+      'processing': 'Pesanan sedang dikemas oleh penjual',
+      'shipped': 'Pesanan dalam perjalanan ke alamat kamu',
+      'completed': 'Pesanan telah berhasil diterima',
+      'cancelled': 'Pesanan ini telah dibatalkan',
+    };
+    return desc[s] ?? '';
   }
 
-  Widget _buildPriceCard(Order order) {
-    return _card(
-      title: 'Rincian Pembayaran',
-      icon: Icons.receipt_outlined,
-      child: Column(
-        children: [
-          _priceRow('Subtotal', _currency.format(order.subtotal)),
-          const SizedBox(height: 8),
-          _priceRow('Ongkos Kirim', _currency.format(order.shippingCost)),
-          const Divider(height: 20),
-          _priceRow(
-            'Total Pembayaran',
-            _currency.format(order.totalPrice),
-            bold: true,
-          ),
-          if (order.notes != null && order.notes!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Catatan: ${order.notes}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTrackingCard(Order order) {
-    return _card(
-      title: 'Informasi Pengiriman',
-      icon: Icons.local_shipping_outlined,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (order.courierName != null)
-            Text(
-              'Kurir: ${order.courierName}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          const SizedBox(height: 4),
-          Text(
-            'No. Resi: ${order.trackingNumber}',
-            style: const TextStyle(fontSize: 14, color: Color(0xFF2D5016)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionsCard(
-    BuildContext context,
-    Order order,
-    OrderProvider provider,
-  ) {
-    return Column(
-      children: [
-        // Bayar (unpaid)
-        if (order.status == 'unpaid')
-          _actionBtn(
-            label: 'Bayar Sekarang',
-            color: Colors.orange,
-            icon: Icons.payment,
-            onTap: () async {
-              final data = await provider.payNow(order.id);
-              if (!context.mounted) return;
-              _showPaymentSheet(context, data, order.orderNumber);
-            },
-          ),
-        // Batalkan (pending / unpaid)
-        if (order.status == 'pending' || order.status == 'unpaid')
-          _actionBtn(
-            label: 'Batalkan Pesanan',
-            color: Colors.red.shade600,
-            icon: Icons.cancel_outlined,
-            outlined: true,
-            onTap: () => _showCancelDialog(context, order, provider),
-          ),
-        // Beli Lagi (completed)
-        if (order.status == 'completed')
-          _actionBtn(
-            label: 'Beli Lagi',
-            color: const Color(0xFF2D5016),
-            icon: Icons.shopping_cart_outlined,
-            onTap: () async {
-              final ok = await provider.buyAgain(order.id);
-              if (!context.mounted) return;
-              context.read<CartProvider>().loadCart();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    ok
-                        ? 'Produk ditambahkan ke keranjang!'
-                        : 'Gagal. Coba lagi.',
-                  ),
-                  backgroundColor: ok ? const Color(0xFF2D5016) : Colors.red,
-                ),
-              );
-            },
-          ),
-      ],
-    );
-  }
-
-  Widget _actionBtn({
-    required String label,
-    required Color color,
-    required IconData icon,
-    required VoidCallback onTap,
-    bool outlined = false,
-  }) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      child: outlined
-          ? OutlinedButton.icon(
-              onPressed: onTap,
-              icon: Icon(icon, color: color),
-              label: Text(
-                label,
-                style: TextStyle(color: color, fontWeight: FontWeight.bold),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: color),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            )
-          : ElevatedButton.icon(
-              onPressed: onTap,
-              icon: Icon(icon, color: Colors.white),
-              label: Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-            ),
-    );
-  }
-
-  Widget _card({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: const Color(0xFF4A7C2C)),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Color(0xFF1E3A0F),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _priceRow(String label, String value, {bool bold = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey.shade700,
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: bold ? FontWeight.w900 : FontWeight.w600,
-            color: bold ? const Color(0xFF2D5016) : const Color(0xFF1F2937),
-            fontSize: bold ? 16 : 14,
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatDate(String raw) {
-    try {
-      final dt = DateTime.parse(raw).toLocal();
-      return DateFormat('dd MMM yyyy, HH:mm', 'id').format(dt);
-    } catch (_) {
-      return raw;
-    }
-  }
-
-  void _showCancelDialog(
-    BuildContext context,
-    Order order,
-    OrderProvider provider,
-  ) {
-    final reasonCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Batalkan Pesanan'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Berikan alasan pembatalan (opsional):'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonCtrl,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Alasan pembatalan...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                contentPadding: const EdgeInsets.all(12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Kembali'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final ok = await provider.cancelOrder(
-                order.id,
-                reasonCtrl.text,
-              );
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    ok ? 'Pesanan berhasil dibatalkan' : 'Gagal membatalkan',
-                  ),
-                  backgroundColor: ok ? const Color(0xFF2D5016) : Colors.red,
-                ),
-              );
-            },
-            child: const Text(
-              'Batalkan Pesanan',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPaymentSheet(
-    BuildContext context,
-    Map<String, dynamic> data,
-    String orderNumber,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Informasi Pembayaran',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 8),
-            Text('Pesanan: $orderNumber'),
-            if (data['bank_accounts'] != null)
-              ...(data['bank_accounts'] as List<dynamic>).map<Widget>((bank) {
-                return Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        bank['bank_name'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text('No. Rek: ${bank['account_number']}'),
-                      Text('a.n. ${bank['account_holder']}'),
-                    ],
-                  ),
-                );
-              }),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D5016),
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Mengerti'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  String _safeDate(String raw) {
+    try { return _date.format(DateTime.parse(raw)); } catch (_) { return raw; }
   }
 }
