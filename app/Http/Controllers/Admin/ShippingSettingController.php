@@ -28,6 +28,9 @@ class ShippingSettingController extends Controller
             'free_shipping_minimum'  => 'required|integer|min:0',
             'minimum_order_amount'   => 'required|integer|min:0',
             'fallback_estimated_days' => 'required|integer|min:1|max:30',
+            'courier_jne_cost'      => 'nullable|integer|min:0',
+            'courier_jnt_cost'      => 'nullable|integer|min:0',
+            'courier_sicepat_cost'  => 'nullable|integer|min:0',
         ]);
 
         foreach (self::COURIERS as $courier) {
@@ -39,7 +42,9 @@ class ShippingSettingController extends Controller
             );
 
             $days = (int) $request->input("courier_{$courier}_days", 3);
+            $cost = (int) $request->input("courier_{$courier}_cost", $request->input('flat_rate_cost', 0));
             Setting::set(self::GROUP, "courier_{$courier}_days", max(1, $days), 'integer');
+            Setting::set(self::GROUP, "courier_{$courier}_cost", max(0, $cost), 'integer');
         }
 
         Setting::set(self::GROUP, 'shipping_method',        $request->shipping_method,               'string');

@@ -39,24 +39,36 @@ class PWAHelper {
     if ('serviceWorker' in navigator) {
       try {
         const registration = await navigator.serviceWorker.register('/service-worker.js', {
-          scope: '/admin',
+          scope: '/',
         });
         console.log('[PWA] Service Worker registered:', registration);
 
+        // Immediate update check
+        registration.update();
+
         // Check for updates periodically
-        setInterval(() => {
-          registration.update();
-        }, 60000);
+        setInterval(() => registration.update(), 60000);
 
         // Listen for SW updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
+          if (!newWorker) return;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[PWA] New service worker available');
-              this.showUpdateNotification();
+              console.log('[PWA] New service worker available, reloading...');
+              // Ask new SW to take over immediately
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
             }
           });
+        });
+
+        // Reload when new SW takes control
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          console.log('[PWA] New SW activated, reloading page...');
+          window.location.reload();
         });
       } catch (err) {
         console.warn('[PWA] Service Worker registration failed:', err);
@@ -221,18 +233,39 @@ function attachNotificationButtonHandler(notificationBtn) {
       return;
     }
 
-    const granted = await window.notificationManager.requestPermission();
+    // Cek permission synchronously (tanpa await sebelumnya)
+    const perm = Notification.permission;
 
-    if (granted) {
+    if (perm === 'granted') {
       updateButtonState();
-
-      // Start polling
       if (window.notificationPolling) {
         window.notificationPolling.updateEnabled(true);
-        console.log('[PWA] Notification polling started');
       }
-    } else {
-      alert('Notifikasi ditolak. Silakan ubah di pengaturan browser.');
+      return;
+    }
+
+    if (perm === 'denied') {
+      const site = window.location.origin;
+      const isEdge = navigator.userAgent.includes('Edg');
+      const url = isEdge
+        ? `edge://settings/content/siteDetails?site=${site}`
+        : `chrome://settings/content/siteDetails?site=${site}`;
+      alert('Notifikasi diblokir browser.\n\n1. Buka: ' + url + '\n2. Set Notifications → Allow\n3. Klik "Clear permissions"\n4. Hard refresh (Ctrl+Shift+R)');
+      return;
+    }
+
+    // perm === 'default' → request langsung
+    try {
+      const result = await Notification.requestPermission();
+      if (result === 'granted') {
+        updateButtonState();
+        if (window.notificationPolling) {
+          window.notificationPolling.updateEnabled(true);
+        }
+        console.log('[PWA] Notification permission granted');
+      }
+    } catch (e) {
+      console.error('[PWA] requestPermission error:', e);
     }
   });
 }

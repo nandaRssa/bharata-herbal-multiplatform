@@ -45,6 +45,35 @@ class AddressController extends Controller
         return $this->success(new AddressResource($address), 'Alamat berhasil ditambahkan.', 201);
     }
 
+    public function update(Request $request, Address $address)
+    {
+        if ($address->user_id !== auth()->id()) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $validated = $request->validate([
+            'label'          => ['required', 'string', 'max:50'],
+            'recipient_name' => ['required', 'string', 'max:255'],
+            'phone'          => ['required', 'string', 'regex:/^[0-9]{10,15}$/'],
+            'street'         => ['required', 'string', 'max:255'],
+            'city'           => ['required', 'string', 'max:100'],
+            'province'       => ['required', 'string', 'max:100'],
+            'postal_code'    => ['required', 'string', 'regex:/^[0-9]{5,6}$/'],
+            'is_default'     => ['nullable', 'boolean'],
+        ]);
+
+        if (!empty($validated['is_default'])) {
+            auth()->user()->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
+            $validated['is_default'] = true;
+        } else {
+            $validated['is_default'] = $address->is_default;
+        }
+
+        $address->update($validated);
+
+        return $this->success(new AddressResource($address), 'Alamat berhasil diperbarui.');
+    }
+
     public function destroy(Address $address)
     {
         if ($address->user_id !== auth()->id()) {

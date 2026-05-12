@@ -24,7 +24,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>⚠️ Peringatan Stok — Bharata Herbal</h1>
+        <h1>Peringatan Stok — Bharata Herbal</h1>
     </div>
     <div class="body">
         <p>Halo, <strong>{{ $admin->name }}</strong></p>

@@ -27,7 +27,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   final _commentCtrl = TextEditingController();
   bool _isSubmitting = false;
 
-  // 📷 Image Picker
+  // Image picker
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _selectedImages = [];
   static const int _maxImages = 3;
@@ -77,7 +77,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: Color(0xFF1E3A0F),
+                  color: Color(0xFF0F3D25),
                 ),
               ),
               const SizedBox(height: 16),
@@ -125,17 +125,17 @@ class _ReviewScreenState extends State<ReviewScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFFE8F5E9),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF4A7C2C).withValues(alpha: 0.3)),
+          border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 36, color: const Color(0xFF2D5016)),
+            Icon(icon, size: 36, color: const Color(0xFF1A5C38)),
             const SizedBox(height: 8),
             Text(
               label,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2D5016),
+                color: Color(0xFF1A5C38),
               ),
             ),
           ],
@@ -145,27 +145,26 @@ class _ReviewScreenState extends State<ReviewScreen> {
   }
 
   Future<void> _submit() async {
-    if (_commentCtrl.text.trim().isEmpty) {
-      _showSnack('Tulis ulasan terlebih dahulu');
-      return;
-    }
+    if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
-    // Note: foto review dikirim terpisah jika API mendukung upload
-    // Untuk sekarang, teks ulasan dikirim via OrderProvider
-    final ok = await context.read<OrderProvider>().submitReview(
-      widget.orderId,
-      widget.productId,
-      _rating,
-      _commentCtrl.text.trim(),
-    );
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-    if (ok) {
+    try {
+      await context.read<OrderProvider>().submitReview(
+        widget.orderId,
+        widget.productId,
+        _rating,
+        _commentCtrl.text.trim(),
+        image: _selectedImages.isNotEmpty ? File(_selectedImages.first.path) : null,
+      );
+      if (!mounted) return;
       _showSnack('Ulasan berhasil dikirim!', isError: false);
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) Navigator.pop(context);
-    } else {
-      _showSnack('Gagal mengirim ulasan. Coba lagi.');
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceAll('Exception: ', '');
+      _showSnack(msg, isError: true);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -174,7 +173,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       SnackBar(
         content: Text(msg),
         backgroundColor:
-            isError ? Colors.red.shade700 : const Color(0xFF2D5016),
+            isError ? Colors.red.shade700 : const Color(0xFF1A5C38),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -189,13 +188,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
         title: const Text(
           'Tulis Ulasan',
           style: TextStyle(
-            color: Color(0xFF1E3A0F),
+            color: Color(0xFF0F3D25),
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0.5,
-        iconTheme: const IconThemeData(color: Color(0xFF1E3A0F)),
+        iconTheme: const IconThemeData(color: Color(0xFF0F3D25)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -230,7 +229,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: Color(0xFF1E3A0F),
+                      color: Color(0xFF0F3D25),
                     ),
                   ),
                 ),
@@ -244,7 +243,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
-                color: Color(0xFF1E3A0F),
+                color: Color(0xFF0F3D25),
               ),
             ),
             const SizedBox(height: 12),
@@ -286,7 +285,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
-                color: Color(0xFF1E3A0F),
+                color: Color(0xFF0F3D25),
               ),
             ),
             const SizedBox(height: 10),
@@ -312,7 +311,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             ),
             const SizedBox(height: 24),
 
-            // ===== 📷 UPLOAD FOTO REVIEW =====
+            // ===== UPLOAD FOTO REVIEW =====
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -321,7 +320,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: Color(0xFF1E3A0F),
+                    color: Color(0xFF0F3D25),
                   ),
                 ),
                 Text(
@@ -355,7 +354,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           color: const Color(0xFFF0FDF4),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFF4A7C2C),
+                            color: const Color(0xFF16A34A),
                             style: BorderStyle.solid,
                           ),
                         ),
@@ -364,7 +363,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           children: [
                             Icon(
                               Icons.add_a_photo_rounded,
-                              color: Color(0xFF4A7C2C),
+                              color: Color(0xFF16A34A),
                               size: 28,
                             ),
                             SizedBox(height: 6),
@@ -372,7 +371,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                               'Tambah Foto',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF4A7C2C),
+                                color: Color(0xFF16A34A),
                                 fontWeight: FontWeight.w600,
                               ),
                               textAlign: TextAlign.center,
@@ -434,7 +433,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
               child: ElevatedButton(
                 onPressed: _isSubmitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D5016),
+                  backgroundColor: const Color(0xFF1A5C38),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(

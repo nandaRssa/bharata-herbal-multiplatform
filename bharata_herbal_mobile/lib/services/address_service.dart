@@ -15,6 +15,12 @@ class AddressService extends BaseService {
     return Address.fromJson(response.data['data']);
   }
 
+  Future<Address> updateAddress(int id, Map<String, dynamic> data) async {
+    final options = await authOptions();
+    final response = await dio.put('/addresses/$id', data: data, options: options);
+    return Address.fromJson(response.data['data']);
+  }
+
   Future<void> deleteAddress(int id) async {
     final options = await authOptions();
     await dio.delete('/addresses/$id', options: options);

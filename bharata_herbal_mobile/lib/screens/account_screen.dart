@@ -29,7 +29,7 @@ class AccountScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(24, 70, 24, 40),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF2D5016), Color(0xFF4A7C2C)],
+                    colors: [Color(0xFF1A5C38), Color(0xFF16A34A)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -43,16 +43,21 @@ class AccountScreen extends StatelessWidget {
                     CircleAvatar(
                       radius: 45,
                       backgroundColor: Colors.white,
-                      child: Text(
-                        user != null && user.name.isNotEmpty
-                            ? user.name[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF4A7C2C),
-                        ),
-                      ),
+                      backgroundImage: (user?.avatar.isNotEmpty ?? false)
+                          ? NetworkImage(user!.avatar)
+                          : null,
+                      child: (user?.avatar.isNotEmpty ?? false)
+                          ? null
+                          : Text(
+                              user != null && user.name.isNotEmpty
+                                  ? user.name[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF16A34A),
+                              ),
+                            ),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -89,7 +94,7 @@ class AccountScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const LoginScreen()),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2D5016),
+                      backgroundColor: const Color(0xFF1A5C38),
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 52),
                       shape: RoundedRectangleBorder(
@@ -116,7 +121,7 @@ class AccountScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E3A0F),
+                          color: Color(0xFF0F3D25),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -144,7 +149,7 @@ class AccountScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E3A0F),
+                          color: Color(0xFF0F3D25),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -229,7 +234,7 @@ class AccountScreen extends StatelessWidget {
             color: const Color(0xFFF0FDF4),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: const Color(0xFF4A7C2C)),
+          child: Icon(icon, color: const Color(0xFF16A34A)),
         ),
         title: Text(
           title,

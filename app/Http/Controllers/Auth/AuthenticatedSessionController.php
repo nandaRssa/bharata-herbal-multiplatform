@@ -31,14 +31,18 @@ class AuthenticatedSessionController extends Controller
             AdminSessionController::recordSession($request);
             // Log admin login
             ActivityLogger::logLogin(Auth::user()->email);
+
+            return redirect()->route('admin.dashboard');
         }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->route('dashboard');
     }
 
     public function destroy(Request $request): RedirectResponse
     {
+        $isAdmin = false;
         if (Auth::check() && Auth::user()->isAdmin()) {
+            $isAdmin = true;
             \App\Models\AdminSession::where('user_id', Auth::id())
                 ->where('token_id', session()->getId())
                 ->update(['is_active' => false]);
@@ -53,7 +57,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return $isAdmin ? redirect()->route('login') : redirect('/');
     }
 }
 

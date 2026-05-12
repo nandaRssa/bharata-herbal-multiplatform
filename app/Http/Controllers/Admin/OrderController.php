@@ -10,22 +10,24 @@ use App\Services\ActivityLogger;
 use App\Services\OrderEventNotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
 
     public static array $statuses = [
-        'pending'    => ['label' => 'Belum Dibayar', 'color' => 'yellow'],
-        'paid'       => ['label' => 'Dibayar',       'color' => 'blue'],
+        'pending'    => ['label' => 'Menunggu',      'color' => 'yellow'],
+        'paid'       => ['label' => 'Sudah Bayar',   'color' => 'blue'],
         'processing' => ['label' => 'Diproses',      'color' => 'indigo'],
-        'shipped'    => ['label' => 'Dikirim',        'color' => 'orange'],
-        'completed'  => ['label' => 'Selesai',        'color' => 'green'],
-        'cancelled'  => ['label' => 'Dibatalkan',     'color' => 'red'],
+        'shipped'    => ['label' => 'Dikirim',       'color' => 'orange'],
+        'completed'  => ['label' => 'Selesai',       'color' => 'green'],
+        'cancelled'  => ['label' => 'Dibatalkan',    'color' => 'red'],
     ];
 
     public static array $tabLabels = [
         ''           => 'Semua',
-        'pending'    => 'Belum Dibayar',
+        'pending'    => 'Menunggu',
+        'paid'       => 'Sudah Bayar',
         'processing' => 'Diproses',
         'shipped'    => 'Dikirim',
         'completed'  => 'Selesai',
@@ -72,13 +74,17 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
+        $order->autoAdvanceStatus();
         $order->load('user', 'items.product', 'payment', 'address', 'trackingUpdates');
         $statuses = self::$statuses;
-        return view('admin.orders.show', compact('order', 'statuses'));
+        $statusOptions = $this->buildStatusOptions($order);
+
+        return view('admin.orders.show', compact('order', 'statuses', 'statusOptions'));
     }
 
     public function updateStatus(Request $request, Order $order)
     {
+        $order->loadMissing('payment', 'trackingUpdates', 'user', 'address');
         $previousStatus = $order->status;
 
         $request->validate([
@@ -88,49 +94,76 @@ class OrderController extends Controller
             'estimated_delivery_at' => 'nullable|date',
         ]);
 
-        $order->update([
-            'status'                => $request->status,
-            'tracking_number'       => $request->tracking_number ?? $order->tracking_number,
-            'courier_name'          => $request->filled('courier_name') ? $request->courier_name : $order->courier_name,
-            'estimated_delivery_at' => $request->filled('estimated_delivery_at')
-                ? $request->date('estimated_delivery_at')
-                : $order->estimated_delivery_at,
-        ]);
-
-        if ($request->status === 'paid' && $order->payment) {
-            $order->payment->update(['status' => 'verified', 'paid_at' => now()]);
+        if (! $order->canTransitionTo($request->status)) {
+            return back()->with('error', 'Perubahan status tidak valid untuk tahap pesanan saat ini.');
         }
 
-        if ($request->status === 'shipped') {
-            if ($order->trackingUpdates()->doesntExist()) {
-                $this->generateTrackingTimeline($order);
+        if ($request->status === 'paid' && $order->isCodOrder()) {
+            return back()->with('error', 'Pesanan COD tidak perlu status Dibayar sebelum selesai.');
+        }
+
+        DB::transaction(function () use ($request, $order) {
+            $order->update([
+                'status'                => $request->status,
+                'tracking_number'       => $request->filled('tracking_number') ? $request->tracking_number : $order->tracking_number,
+                'courier_name'          => $request->filled('courier_name') ? $request->courier_name : $order->courier_name,
+                'estimated_delivery_at' => $request->filled('estimated_delivery_at')
+                    ? $request->date('estimated_delivery_at')
+                    : $order->estimated_delivery_at,
+            ]);
+
+            $this->syncPaymentStatus($order, $request->status);
+
+            if ($request->status === 'shipped') {
+                if ($order->trackingUpdates()->doesntExist()) {
+                    $this->generateTrackingTimeline($order);
+                }
+
+                if (! $request->filled('estimated_delivery_at')) {
+                    $order->update([
+                        'estimated_delivery_at' => $this->resolveEstimatedDelivery($order, $request->courier_name ?: $order->courier_name),
+                    ]);
+                }
             }
+        });
 
-            if (! $request->filled('estimated_delivery_at')) {
-                $order->update([
-                    'estimated_delivery_at' => $this->resolveEstimatedDelivery($order, $request->courier_name ?: $order->courier_name),
-                ]);
-            }
-        }
+        $order->refresh()->load('user', 'payment', 'trackingUpdates');
+        $this->dispatchStatusNotification($order, $previousStatus, $request->status);
 
-        $order->load('user');
-
-        if ($request->status === 'paid' && $previousStatus !== 'paid') {
-            app(OrderEventNotificationService::class)->notify('payment_confirmed', $order);
-        }
-
-        if ($request->status === 'shipped' && $previousStatus !== 'shipped') {
-            app(OrderEventNotificationService::class)->notify('order_shipped', $order);
-        }
-
-        if ($request->status === 'completed' && $previousStatus !== 'completed') {
-            app(OrderEventNotificationService::class)->notify('order_completed', $order);
-        }
-
-        // Log activity
         ActivityLogger::logOrderStatusUpdate($order, $previousStatus, $request->status);
 
         return back()->with('success', 'Status pesanan berhasil diperbarui.');
+    }
+
+    /**
+     * Admin confirms customer's uploaded payment proof → marks order as paid.
+     */
+    public function confirmPaymentProof(Request $request, Order $order)
+    {
+        $order->loadMissing('payment', 'user');
+
+        if (!$order->payment?->proof_image) {
+            return back()->with('error', 'Customer belum mengunggah bukti pembayaran.');
+        }
+
+        if (! $order->canTransitionTo('paid')) {
+            return back()->with('error', 'Pesanan ini tidak berada pada tahap yang bisa dikonfirmasi pembayarannya.');
+        }
+
+        $previousStatus = $order->status;
+
+        DB::transaction(function () use ($order) {
+            $order->update(['status' => 'paid']);
+            $this->syncPaymentStatus($order, 'paid');
+        });
+
+        if ($previousStatus !== 'paid') {
+            app(OrderEventNotificationService::class)->notify('payment_confirmed', $order->load('user'));
+        }
+
+        ActivityLogger::logOrderStatusUpdate($order, $previousStatus, 'paid');
+
+        return back()->with('success', 'Pembayaran berhasil dikonfirmasi. Status pesanan diubah ke Dibayar.');
     }
 
     public function export(Request $request)
@@ -205,30 +238,32 @@ class OrderController extends Controller
         $orderIds = $request->order_ids;
         $newStatus = $request->status;
 
-        $orders = Order::whereIn('id', $orderIds)->get();
+        if (in_array($newStatus, ['paid', 'shipped', 'completed'], true)) {
+            return back()->with('error', 'Status tersebut harus diperbarui per pesanan agar alurnya tetap valid.');
+        }
+
+        $orders = Order::with('payment', 'trackingUpdates', 'user')
+            ->whereIn('id', $orderIds)
+            ->get();
+
+        $invalidOrders = $orders
+            ->filter(fn (Order $order) => ! $order->canTransitionTo($newStatus))
+            ->pluck('order_number')
+            ->all();
+
+        if ($invalidOrders !== []) {
+            return back()->with('error', 'Ada pesanan yang tidak bisa dipindahkan ke status tersebut: ' . implode(', ', $invalidOrders));
+        }
 
         foreach ($orders as $order) {
             $previousStatus = $order->status;
 
-            $order->update(['status' => $newStatus]);
+            DB::transaction(function () use ($order, $newStatus) {
+                $order->update(['status' => $newStatus]);
+                $this->syncPaymentStatus($order, $newStatus);
+            });
 
-            if ($newStatus === 'paid' && $order->payment && $previousStatus !== 'paid') {
-                $order->payment->update(['status' => 'verified', 'paid_at' => now()]);
-                app(OrderEventNotificationService::class)->notify('payment_confirmed', $order);
-            }
-
-            if ($newStatus === 'shipped' && $previousStatus !== 'shipped') {
-                if ($order->trackingUpdates()->doesntExist()) {
-                    $this->generateTrackingTimeline($order);
-                }
-                app(OrderEventNotificationService::class)->notify('order_shipped', $order);
-            }
-
-            if ($newStatus === 'completed' && $previousStatus !== 'completed') {
-                app(OrderEventNotificationService::class)->notify('order_completed', $order);
-            }
-
-            // Log activity
+            $this->dispatchStatusNotification($order->refresh()->load('user', 'payment'), $previousStatus, $newStatus);
             ActivityLogger::logOrderStatusUpdate($order, $previousStatus, $newStatus);
         }
 
@@ -239,14 +274,87 @@ class OrderController extends Controller
     private function getStatusLabel($status)
     {
         return match($status) {
-            'pending' => 'Belum Dibayar',
-            'paid' => 'Dibayar',
+            'pending' => 'Menunggu',
+            'paid' => 'Sudah Bayar',
             'processing' => 'Diproses',
             'shipped' => 'Dikirim',
             'completed' => 'Selesai',
             'cancelled' => 'Dibatalkan',
             default => $status,
         };
+    }
+
+    private function buildStatusOptions(Order $order): array
+    {
+        $options = [$order->status];
+
+        foreach ($order->allowedNextStatuses() as $status) {
+            $options[] = $status;
+        }
+
+        return collect($options)
+            ->unique()
+            ->mapWithKeys(function (string $status) use ($order) {
+                $label = $status === $order->status
+                    ? $order->status_label
+                    : $this->getStatusLabel($status);
+
+                return [$status => $label];
+            })
+            ->all();
+    }
+
+    private function syncPaymentStatus(Order $order, string $newStatus): void
+    {
+        if (! $order->payment) {
+            return;
+        }
+
+        if ($newStatus === 'cancelled') {
+            $order->payment->update(['status' => 'failed']);
+            return;
+        }
+
+        if ($order->payment->method === 'cod') {
+            if ($newStatus === 'completed') {
+                $order->payment->update([
+                    'status' => 'verified',
+                    'paid_at' => $order->payment->paid_at ?? now(),
+                ]);
+            }
+
+            return;
+        }
+
+        if (in_array($newStatus, ['paid', 'processing', 'shipped', 'completed'], true)) {
+            $order->payment->update([
+                'status' => 'verified',
+                'paid_at' => $order->payment->paid_at ?? now(),
+            ]);
+        }
+    }
+
+    private function dispatchStatusNotification(Order $order, string $previousStatus, string $newStatus): void
+    {
+        if ($newStatus === 'paid' && $previousStatus !== 'paid') {
+            app(OrderEventNotificationService::class)->notify('payment_confirmed', $order);
+        }
+
+        if ($newStatus === 'processing' && $previousStatus !== 'processing') {
+            app(OrderEventNotificationService::class)->notify('order_processing', $order);
+        }
+
+        if ($newStatus === 'shipped' && $previousStatus !== 'shipped') {
+            app(OrderEventNotificationService::class)->notify('order_shipped', $order);
+        }
+
+        if ($newStatus === 'completed' && $previousStatus !== 'completed') {
+            app(OrderEventNotificationService::class)->notify('order_completed', $order);
+        }
+
+        if ($newStatus === 'cancelled' && $previousStatus !== 'cancelled') {
+            app(OrderEventNotificationService::class)->notify('order_cancelled', $order);
+        }
     }
 
     private function generateTrackingTimeline(Order $order): void
@@ -257,17 +365,20 @@ class OrderController extends Controller
         $baseTime = $order->created_at instanceof Carbon ? $order->created_at->copy() : Carbon::parse($order->created_at);
 
         $checkpoints = [
-            ['minutes' => 0, 'keterangan' => 'Paket di-pickup kurir', 'lokasi' => $sellerCity],
-            ['minutes' => 120, 'keterangan' => 'Tiba di gudang asal', 'lokasi' => $sellerCity],
-            ['minutes' => 480, 'keterangan' => 'Dalam perjalanan ke kota tujuan', 'lokasi' => $transitCity],
-            ['minutes' => 1200, 'keterangan' => 'Paket tiba di gudang tujuan', 'lokasi' => $buyerCity],
+            ['seconds' => 1, 'keterangan' => 'Pesanan diproses oleh penjual', 'lokasi' => $sellerCity],
+            ['seconds' => 2, 'keterangan' => 'Pesanan sedang dikemas', 'lokasi' => $sellerCity],
+            ['seconds' => 3, 'keterangan' => 'Pesanan diserahkan ke kurir', 'lokasi' => $sellerCity],
+            ['seconds' => 4, 'keterangan' => 'Pesanan dalam perjalanan', 'lokasi' => $transitCity],
+            ['seconds' => 5, 'keterangan' => 'Pesanan sampai di kota tujuan', 'lokasi' => $buyerCity],
+            ['seconds' => 6, 'keterangan' => 'Pesanan sedang diantar ke alamat tujuan', 'lokasi' => $buyerCity],
+            ['seconds' => 7, 'keterangan' => 'Pesanan telah diterima', 'lokasi' => $buyerCity],
         ];
 
         foreach ($checkpoints as $checkpoint) {
             $order->trackingUpdates()->create([
                 'keterangan' => $checkpoint['keterangan'],
                 'lokasi' => $checkpoint['lokasi'],
-                'created_at' => $baseTime->copy()->addMinutes($checkpoint['minutes']),
+                'created_at' => now()->subSeconds(10 - $checkpoint['seconds']),
             ]);
         }
     }
@@ -325,7 +436,7 @@ class OrderController extends Controller
                          ->where('status', 'pending')
                          ->latest()
                          ->limit(3)
-                         ->get(['id', 'user_id', 'total', 'created_at'])
+                         ->get(['id', 'user_id', 'total_price', 'created_at'])
                          ->load('user:id,name');
 
         // Simpan last check ke session
@@ -341,4 +452,3 @@ class OrderController extends Controller
         ]);
     }
 }
-

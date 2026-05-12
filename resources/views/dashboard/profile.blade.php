@@ -3,6 +3,30 @@
     <x-slot name="slot">
 
     <div class="space-y-6">
+        {{-- Profile Photo --}}
+        <div class="card p-6">
+            <h2 class="font-bold text-gray-800 text-lg mb-5">Foto Profil</h2>
+            <div class="flex items-center gap-5">
+                @if ($user->avatar_url)
+                <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}" class="w-24 h-24 rounded-full object-cover">
+                @else
+                <div class="w-24 h-24 bg-herbal-100 rounded-full flex items-center justify-center">
+                    <span class="font-bold text-herbal-700 text-3xl">{{ $user->initials }}</span>
+                </div>
+                @endif
+
+                <form id="profile-photo-form" action="{{ route('user.profile.photo') }}" method="POST" enctype="multipart/form-data" class="space-y-2">
+                    @csrf
+                    <label class="btn-primary text-sm py-2.5 inline-flex cursor-pointer">
+                        Unggah Foto
+                        <input id="profile-photo-input" type="file" name="photo" accept="image/jpeg,image/png,image/jpg" class="hidden">
+                    </label>
+                    <p class="text-xs text-gray-400">JPG/PNG, maks 2MB.</p>
+                    @error('photo')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </form>
+            </div>
+        </div>
+
         {{-- Profile Info --}}
         <div class="card p-6">
             <h2 class="font-bold text-gray-800 text-lg mb-5">Informasi Profil</h2>
@@ -50,6 +74,14 @@
             </form>
         </div>
     </div>
+
+    <script>
+        document.getElementById('profile-photo-input')?.addEventListener('change', function () {
+            if (this.files.length > 0) {
+                document.getElementById('profile-photo-form').submit();
+            }
+        });
+    </script>
 
     </x-slot>
 </x-layouts.dashboard>

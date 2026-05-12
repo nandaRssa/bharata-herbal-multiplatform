@@ -48,12 +48,12 @@ class _CartScreenState extends State<CartScreen> {
         title: const Text(
           'Keranjang Belanja',
           style: TextStyle(
-            color: Color(0xFF1E3A0F),
+            color: Color(0xFF0F3D25),
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF1E3A0F)),
+        iconTheme: const IconThemeData(color: Color(0xFF0F3D25)),
         actions: [
           Consumer<CartProvider>(
             builder: (_, cart, __) {
@@ -75,7 +75,7 @@ class _CartScreenState extends State<CartScreen> {
         builder: (context, cartProvider, _) {
           if (cartProvider.isLoading) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2D5016)),
+              child: CircularProgressIndicator(color: Color(0xFF1A5C38)),
             );
           }
 
@@ -135,11 +135,11 @@ class _CartScreenState extends State<CartScreen> {
               height: 22,
               decoration: BoxDecoration(
                 color: allSelected
-                    ? const Color(0xFF2D5016)
+                    ? const Color(0xFF1A5C38)
                     : Colors.transparent,
                 border: Border.all(
                   color: allSelected
-                      ? const Color(0xFF2D5016)
+                      ? const Color(0xFF1A5C38)
                       : Colors.grey.shade400,
                   width: 2,
                 ),
@@ -196,11 +196,11 @@ class _CartScreenState extends State<CartScreen> {
                 margin: const EdgeInsets.only(top: 4),
                 decoration: BoxDecoration(
                   color: item.isSelected
-                      ? const Color(0xFF2D5016)
+                      ? const Color(0xFF1A5C38)
                       : Colors.transparent,
                   border: Border.all(
                     color: item.isSelected
-                        ? const Color(0xFF2D5016)
+                        ? const Color(0xFF1A5C38)
                         : Colors.grey.shade400,
                     width: 2,
                   ),
@@ -250,7 +250,7 @@ class _CartScreenState extends State<CartScreen> {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF2D5016),
+                      color: Color(0xFF1A5C38),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -325,7 +325,7 @@ class _CartScreenState extends State<CartScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: 16, color: const Color(0xFF2D5016)),
+        child: Icon(icon, size: 16, color: const Color(0xFF1A5C38)),
       ),
     );
   }
@@ -345,7 +345,7 @@ class _CartScreenState extends State<CartScreen> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Color(0xFF1E3A0F),
+              color: Color(0xFF0F3D25),
             ),
           ),
           const SizedBox(height: 12),
@@ -358,7 +358,7 @@ class _CartScreenState extends State<CartScreen> {
             'Total',
             _currency.format(cart.total),
             bold: true,
-            color: const Color(0xFF2D5016),
+            color: const Color(0xFF1A5C38),
           ),
           if (!cart.isMinimumMet && cart.minimumOrderAmount > 0) ...[
             const SizedBox(height: 8),
@@ -456,7 +456,7 @@ class _CartScreenState extends State<CartScreen> {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF2D5016),
+                    color: Color(0xFF1A5C38),
                   ),
                 ),
               ],
@@ -474,7 +474,7 @@ class _CartScreenState extends State<CartScreen> {
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2D5016),
+              backgroundColor: const Color(0xFF1A5C38),
               disabledBackgroundColor: Colors.grey.shade300,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
@@ -507,7 +507,7 @@ class _CartScreenState extends State<CartScreen> {
             child: const Icon(
               Icons.shopping_cart_outlined,
               size: 64,
-              color: Color(0xFF4A7C2C),
+              color: Color(0xFF16A34A),
             ),
           ),
           const SizedBox(height: 24),
@@ -516,7 +516,7 @@ class _CartScreenState extends State<CartScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E3A0F),
+              color: Color(0xFF0F3D25),
             ),
           ),
           const SizedBox(height: 8),
@@ -528,7 +528,7 @@ class _CartScreenState extends State<CartScreen> {
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2D5016),
+              backgroundColor: const Color(0xFF1A5C38),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               shape: RoundedRectangleBorder(
@@ -552,21 +552,21 @@ class _CartScreenState extends State<CartScreen> {
       appBar: AppBar(
         title: const Text('Keranjang Belanja'),
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1E3A0F),
+        foregroundColor: const Color(0xFF0F3D25),
         elevation: 0.5,
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.lock_outline_rounded, size: 64, color: Color(0xFF4A7C2C)),
+            const Icon(Icons.lock_outline_rounded, size: 64, color: Color(0xFF16A34A)),
             const SizedBox(height: 16),
             const Text(
               'Login diperlukan',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1E3A0F),
+                color: Color(0xFF0F3D25),
               ),
             ),
             const SizedBox(height: 8),
@@ -582,7 +582,7 @@ class _CartScreenState extends State<CartScreen> {
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2D5016),
+                backgroundColor: const Color(0xFF1A5C38),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,

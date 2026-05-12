@@ -8,16 +8,17 @@
     <meta name="theme-color" content="#1f5233">
     <meta name="description" content="Dashboard Admin Panel untuk mengelola sistem e-commerce Bharata Herbal">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231f5233' width='180' height='180'/><text x='50%' y='50%' font-size='80' font-weight='bold' text-anchor='middle' dominant-baseline='middle' fill='white' font-family='Arial'>BH</text></svg>">
+    <link rel="apple-touch-icon" href="{{ asset('pwa-icon-192.png') }}">
     <title>{{ $title ?? 'Admin' }} — Bharata Herbal</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('pwa.css') }}">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="//unpkg.com/alpinejs" defer></script>
-    <script src="{{ asset('notifications.js') }}"></script>
-    <script src="{{ asset('notifications-polling.js') }}"></script>
-    <script src="{{ asset('pwa.js') }}"></script>
+    <script src="{{ asset('notifications.js') }}?v=3"></script>
+    <script src="{{ asset('notifications-polling.js') }}?v=3"></script>
+    <script src="{{ asset('push-manager.js') }}?v=7"></script>
+    <script src="{{ asset('pwa.js') }}?v=3"></script>
 </head>
 
 <body class="bg-gray-50 font-sans antialiased">
@@ -39,7 +40,7 @@
 
                 {{-- LOGO --}}
                 <div class="p-5 flex items-center gap-3 border-b border-white/10">
-                    <img src="{{ asset('images/logo-bharata.jpeg') }}" alt="Logo" class="w-8 h-8 rounded-lg object-cover">
+                    <img src="{{ asset('images/logo bharata.png') }}" alt="Logo" class="w-8 h-8 rounded-lg object-cover">
                     <h1 class="font-semibold text-lg tracking-wide">Bharata Herbal</h1>
                 </div>
 
@@ -86,6 +87,13 @@
                {{ request()->routeIs('admin.reports*') ? 'bg-green-800/60 border-l-4 border-green-400' : 'hover:bg-white/5' }}">
                         <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
                         Laporan Penjualan
+                    </a>
+
+                    <a href="{{ route('admin.vouchers.index') }}"
+                        class="flex items-center gap-3 px-3 py-2.5 transition
+               {{ request()->routeIs('admin.vouchers*') ? 'bg-green-800/60 border-l-4 border-green-400' : 'hover:bg-white/5' }}">
+                        <i data-lucide="ticket" class="w-5 h-5"></i>
+                        Voucher & Promo
                     </a>
 
                 </nav>

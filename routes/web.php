@@ -6,9 +6,11 @@ use App\Http\Controllers\Admin\PaymentSettingController;
 use App\Http\Controllers\Admin\ShippingSettingController;
 use App\Http\Controllers\Admin\StoreSettingController;
 use App\Http\Controllers\Admin\ProductSettingController;
+use App\Http\Controllers\Admin\VoucherController as AdminVoucherController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminSessionController;
 use App\Http\Controllers\Admin\AdminNotificationController;
+use App\Http\Controllers\Admin\PushSubscriptionController;
 use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\CartController;
@@ -77,9 +79,11 @@ if (config('app.customer_web_enabled', false)) {
         // [MIGRATE TO MOBILE] Order Management
         Route::get('/pesanan', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/pesanan/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::post('/pesanan/{order}/selesai', [OrderController::class, 'complete'])->name('orders.complete');
         Route::post('/pesanan/{order}/batal', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/pesanan/{order}/item/{itemId}/batal', [OrderController::class, 'cancelItem'])->name('orders.cancel-item');
         Route::post('/pesanan/{order}/bayar', [OrderController::class, 'payNow'])->name('orders.pay-now');
+        Route::post('/pesanan/{order}/upload-bukti', [OrderController::class, 'uploadProof'])->name('orders.upload-proof');
         Route::post('/pesanan/{order}/beli-lagi', [OrderController::class, 'buyAgain'])->name('orders.buy-again');
         Route::post('/pesanan/{order}/beli-lagi-item', [OrderController::class, 'buyAgainItem'])->name('orders.buy-again-item');
         Route::post('/pesanan/{order}/ulasan', [OrderController::class, 'storeReview'])->name('orders.review');
@@ -89,6 +93,7 @@ if (config('app.customer_web_enabled', false)) {
         Route::prefix('akun')->name('user.')->group(function () {
             Route::get('/profil', [UserDashboardController::class, 'profile'])->name('profile');
             Route::put('/profil', [UserDashboardController::class, 'updateProfile'])->name('profile.update');
+            Route::post('/profil/foto', [UserDashboardController::class, 'uploadPhoto'])->name('profile.photo');
             Route::put('/password', [UserDashboardController::class, 'changePassword'])->name('password.update');
             Route::get('/alamat', [UserDashboardController::class, 'addresses'])->name('addresses');
             Route::post('/alamat', [UserDashboardController::class, 'storeAddress'])->name('addresses.store');
@@ -124,6 +129,16 @@ Route::middleware(['auth', 'admin', 'update_session_activity'])->prefix('admin')
     Route::post('orders/bulk/update-status', [Admin\OrderController::class, 'bulkUpdateStatus'])->name('orders.bulk-update-status');
     Route::get('orders/{order}', [Admin\OrderController::class, 'show'])->name('orders.show');
     Route::patch('orders/{order}/status', [Admin\OrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::post('orders/{order}/confirm-payment-proof', [Admin\OrderController::class, 'confirmPaymentProof'])->name('orders.confirm-proof');
+
+    // Vouchers
+    Route::get('vouchers', [AdminVoucherController::class, 'index'])->name('vouchers.index');
+    Route::get('vouchers/create', [AdminVoucherController::class, 'create'])->name('vouchers.create');
+    Route::post('vouchers', [AdminVoucherController::class, 'store'])->name('vouchers.store');
+    Route::get('vouchers/{voucher}/edit', [AdminVoucherController::class, 'edit'])->name('vouchers.edit');
+    Route::put('vouchers/{voucher}', [AdminVoucherController::class, 'update'])->name('vouchers.update');
+    Route::delete('vouchers/{voucher}', [AdminVoucherController::class, 'destroy'])->name('vouchers.destroy');
+    Route::patch('vouchers/{voucher}/toggle', [AdminVoucherController::class, 'toggleStatus'])->name('vouchers.toggle');
 
     Route::get('customers', [Admin\CustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/{user}', [Admin\CustomerController::class, 'show'])->name('customers.show');
@@ -190,4 +205,8 @@ Route::middleware(['auth', 'admin', 'update_session_activity'])->prefix('admin')
     Route::post('notifications/{notification}/read',  [AdminNotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('notifications/read-all',             [AdminNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::delete('notifications/{notification}',     [AdminNotificationController::class, 'destroy'])->name('notifications.destroy');
+
+    Route::post('push/subscribe',   [PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
+    Route::post('push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
+    Route::post('push/test',        [PushSubscriptionController::class, 'test'])->name('push.test');
 });

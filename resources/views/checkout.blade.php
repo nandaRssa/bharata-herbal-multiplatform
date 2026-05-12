@@ -85,11 +85,11 @@
 
                         @php
                         $paymentMethods = [
-                            'cod'          => ['label' => 'Bayar di Tempat (COD)', 'icon' => '🏠', 'desc' => 'Bayar saat produk tiba', 'color' => 'amber'],
-                            'dana'         => ['label' => 'Dana', 'icon' => '💙', 'desc' => 'Transfer via aplikasi Dana', 'color' => 'blue'],
-                            'gopay'        => ['label' => 'GoPay', 'icon' => '💚', 'desc' => 'Transfer via GoPay', 'color' => 'green'],
-                            'qris'         => ['label' => 'QRIS', 'icon' => '📱', 'desc' => 'Scan kode QR universal', 'color' => 'purple'],
-                            'bank_transfer'=> ['label' => 'Virtual Account / Bank Transfer', 'icon' => '🏦', 'desc' => 'Transfer via ATM atau m-Banking', 'color' => 'gray'],
+                            'cod'          => ['label' => 'Bayar di Tempat (COD)', 'icon' => '<i data-lucide="home" class="w-6 h-6 inline-block"></i>', 'desc' => 'Bayar saat produk tiba', 'color' => 'amber'],
+                            'dana'         => ['label' => 'Dana', 'icon' => '<i data-lucide="smartphone" class="w-6 h-6 inline-block"></i>', 'desc' => 'Transfer via aplikasi Dana', 'color' => 'blue'],
+                            'gopay'        => ['label' => 'GoPay', 'icon' => '<i data-lucide="smartphone" class="w-6 h-6 inline-block"></i>', 'desc' => 'Transfer via GoPay', 'color' => 'green'],
+                            'qris'         => ['label' => 'QRIS', 'icon' => '<i data-lucide="qr-code" class="w-6 h-6 inline-block"></i>', 'desc' => 'Scan kode QR universal', 'color' => 'purple'],
+                            'bank_transfer'=> ['label' => 'Virtual Account / Bank Transfer', 'icon' => '<i data-lucide="landmark" class="w-6 h-6 inline-block"></i>', 'desc' => 'Transfer via ATM atau m-Banking', 'color' => 'gray'],
                         ];
                         @endphp
 
@@ -105,13 +105,13 @@
                                        {{ old('payment_method', 'cod') == $val ? 'checked' : '' }}
                                        class="text-herbal-600 focus:ring-herbal-500"
                                        onchange="highlightPaymentMethod('{{ $val }}')">
-                                <span class="text-2xl">{{ $pm['icon'] }}</span>
+                                {!! $pm['icon'] !!}
                                 <div class="flex-1">
                                     <span class="text-sm font-semibold text-gray-800 block">{{ $pm['label'] }}</span>
                                     <span class="text-xs text-gray-500">{{ $pm['desc'] }}</span>
                                 </div>
                                 @if ($val !== 'cod')
-                                    <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">⏱ 2 jam</span>
+                                    <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Maks. 2 jam</span>
                                 @endif
                             </label>
                         @endif
@@ -119,7 +119,7 @@
                         </div>
 
                         <div id="payment-deadline-notice" class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 {{ old('payment_method', 'cod') === 'cod' ? 'hidden' : '' }}">
-                            ⏳ Untuk metode ini, Anda memiliki <strong>2 jam</strong> untuk menyelesaikan pembayaran setelah pesanan dibuat. Pesanan akan otomatis dibatalkan jika melewati batas waktu.
+                            Untuk metode ini, Anda memiliki <strong>2 jam</strong> untuk menyelesaikan pembayaran setelah pesanan dibuat. Pesanan akan otomatis dibatalkan jika melewati batas waktu.
                         </div>
 
                         @if (in_array('bank_transfer', $activeMethods ?? [], true))

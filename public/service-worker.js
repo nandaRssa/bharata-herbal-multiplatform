@@ -1,7 +1,7 @@
 // Bharata Herbal Admin Dashboard - Service Worker
 // Caching strategy untuk PWA offline support
 
-const CACHE_VERSION = 'bharata-admin-v1';
+const CACHE_VERSION = 'bharata-admin-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -227,11 +227,14 @@ self.addEventListener('message', (event) => {
   }
 
   if (type === 'GET_CACHE_SIZE') {
-    // Send cache status to client
     event.ports[0].postMessage({
       status: 'Service Worker is running',
       caches: [STATIC_CACHE, DYNAMIC_CACHE],
     });
+  }
+
+  if (type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
 
@@ -244,8 +247,8 @@ self.addEventListener('push', function(event) {
   let data = {
     title: 'Bharata Herbal',
     body: 'Ada notifikasi baru',
-    icon: '/images/logo-bharata.jpeg',
-    badge: '/images/logo-bharata.jpeg',
+    icon: '/images/logo bharata.png',
+    badge: '/images/logo bharata.png',
     url: '/admin',
   };
 
@@ -260,8 +263,8 @@ self.addEventListener('push', function(event) {
 
   const options = {
     body: data.body,
-    icon: data.icon || '/images/logo-bharata.jpeg',
-    badge: data.badge || '/images/logo-bharata.jpeg',
+    icon: data.icon || '/images/logo bharata.png',
+    badge: data.badge || '/images/logo bharata.png',
     data: { url: data.url || '/admin' },
     vibrate: [200, 100, 200],
     requireInteraction: false,

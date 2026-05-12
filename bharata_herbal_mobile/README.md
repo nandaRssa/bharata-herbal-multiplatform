@@ -2,6 +2,16 @@
 
 A new Flutter project.
 
+## Firebase Cloud Messaging
+
+Letakkan file konfigurasi Firebase Android di:
+
+```text
+android/app/google-services.json
+```
+
+Gunakan file dari project Firebase Bharata Herbal yang aktif. File ini dibutuhkan agar Firebase Core dan Firebase Messaging bisa menginisialisasi aplikasi Android.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

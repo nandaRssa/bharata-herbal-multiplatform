@@ -3,14 +3,33 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../providers/product_provider.dart';
+import '../services/store_info_service.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/product_card.dart';
 import 'product_detail_screen.dart';
 import 'catalog_screen.dart';
+import '../widgets/store_footer.dart';
 
-
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  StoreInfo? _storeInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStoreInfo();
+  }
+
+  Future<void> _loadStoreInfo() async {
+    final info = await StoreInfoService().getStoreInfo();
+    if (mounted && info != null) setState(() => _storeInfo = info);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +39,10 @@ class HomeScreen extends StatelessWidget {
       symbol: 'Rp ',
       decimalDigits: 0,
     );
+
+    final slogan = _storeInfo?.description.isNotEmpty == true
+        ? _storeInfo!.description
+        : 'Produk herbal dari\nalam nusantara';
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -35,7 +58,7 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF2D5016), Color(0xFF4A7C2C)],
+                    colors: [Color(0xFF1A5C38), Color(0xFF16A34A)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -56,10 +79,13 @@ class HomeScreen extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
-                            Icons.spa_rounded,
-                            color: Colors.white,
-                            size: 28,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.all(Radius.circular(6)),
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              width: 28,
+                              height: 28,
+                            ),
                           ),
                         ),
                         Container(
@@ -88,9 +114,9 @@ class HomeScreen extends StatelessWidget {
                       style: TextStyle(color: Colors.white70, fontSize: 18),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Produk herbal dari\nalam nusantara',
-                      style: TextStyle(
+                    Text(
+                      slogan,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
@@ -98,8 +124,10 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Eksplorasi katalog, bandingkan manfaat,\ndan temukan produk yang paling cocok\nuntuk kebutuhan Anda.',
+                    Text(
+                      _storeInfo?.name.isNotEmpty == true
+                          ? 'Eksplorasi katalog ${_storeInfo!.name}, bandingkan manfaat,\ndan temukan produk yang paling cocok\nuntuk kebutuhan Anda.'
+                          : 'Eksplorasi katalog, bandingkan manfaat,\ndan temukan produk yang paling cocok\nuntuk kebutuhan Anda.',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
@@ -118,7 +146,7 @@ class HomeScreen extends StatelessWidget {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF2D5016),
+                        foregroundColor: const Color(0xFF1A5C38),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 14,
@@ -174,7 +202,7 @@ class HomeScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF1E3A0F),
+                            color: Color(0xFF0F3D25),
                           ),
                         ),
                         SizedBox(height: 4),
@@ -196,7 +224,7 @@ class HomeScreen extends StatelessWidget {
                       child: const Text(
                         'Lihat semua',
                         style: TextStyle(
-                          color: Color(0xFF2D5016),
+                          color: Color(0xFF1A5C38),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -286,7 +314,10 @@ class HomeScreen extends StatelessWidget {
                 },
               ),
 
-              const SizedBox(height: 60),
+              const SizedBox(height: 30),
+
+              // --- 7. FOOTER TOKO ---
+              const StoreFooter(),
             ],
           ),
         ),
@@ -319,7 +350,7 @@ class HomeScreen extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF1E3A0F),
+                        color: Color(0xFF0F3D25),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -338,7 +369,7 @@ class HomeScreen extends StatelessWidget {
                 child: const Text(
                   'Semua',
                   style: TextStyle(
-                    color: Color(0xFF2D5016),
+                    color: Color(0xFF1A5C38),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -411,7 +442,7 @@ class HomeScreen extends StatelessWidget {
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF2D5016),
+              color: Color(0xFF1A5C38),
             ),
           ),
           const SizedBox(height: 4),

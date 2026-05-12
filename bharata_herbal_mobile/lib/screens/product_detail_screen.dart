@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
+import '../models/review_model.dart';
 import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/product_service.dart';
 import 'cart_screen.dart';
 import 'login_screen.dart';
 
@@ -17,13 +19,33 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  Product? _product;
   int _quantity = 1;
   bool _isAdding = false;
+  bool _isLoadingDetail = true;
   final _currency = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp ',
     decimalDigits: 0,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProduct();
+  }
+
+  Future<void> _loadProduct() async {
+    _isLoadingDetail = true;
+    if (mounted) setState(() {});
+    final fresh = await ProductService().getProductById(widget.product.id);
+    if (mounted) {
+      setState(() {
+        _product = fresh ?? widget.product;
+        _isLoadingDetail = false;
+      });
+    }
+  }
 
   Future<void> _addToCart() async {
     final auth = context.read<AuthProvider>();
@@ -35,9 +57,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return;
     }
 
+    final prod = _product ?? widget.product;
     setState(() => _isAdding = true);
     final error = await context.read<CartProvider>().addToCart(
-      widget.product.id,
+      prod.id,
       _quantity,
     );
     if (!mounted) return;
@@ -75,7 +98,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF2D5016),
+        backgroundColor: const Color(0xFF1A5C38),
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -85,7 +108,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final product = widget.product;
+    final product = _product ?? widget.product;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -134,9 +157,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       body: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
+            child: RefreshIndicator(
+              color: const Color(0xFF1A5C38),
+              onRefresh: _loadProduct,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Gambar Produk
@@ -172,7 +198,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               style: const TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF2D5016),
+                                color: Color(0xFF1A5C38),
                               ),
                             ),
                           ],
@@ -202,6 +228,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 fontSize: 14,
                               ),
                             ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '(${product.ratingCount} Ulasan)',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
                             const SizedBox(width: 12),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -222,7 +256,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   color: product.stock > 0
-                                      ? const Color(0xFF2D5016)
+                                      ? const Color(0xFF1A5C38)
                                       : Colors.red,
                                 ),
                               ),
@@ -262,8 +296,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     child: Column(
                       children: [
                         const TabBar(
-                          labelColor: Color(0xFF2D5016),
-                          indicatorColor: Color(0xFF2D5016),
+                          labelColor: Color(0xFF1A5C38),
+                          indicatorColor: Color(0xFF1A5C38),
                           tabs: [
                             Tab(text: 'Manfaat'),
                             Tab(text: 'Komposisi'),
@@ -306,9 +340,66 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+
+                  // Section Ulasan Pembeli
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Divider(height: 1),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Ulasan Pembeli',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F2937),
+                              ),
+                            ),
+                            Text(
+                              '${product.ratingCount} Ulasan',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF1A5C38),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (product.reviews.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Center(
+                              child: Text(
+                                'Belum ada ulasan untuk produk ini.',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          )
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: product.reviews.length,
+                            separatorBuilder: (_, __) => const Divider(height: 32),
+                            itemBuilder: (ctx, i) {
+                              final rev = product.reviews[i];
+                              return _buildReviewItem(rev);
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
+          ),
           ),
 
           // Bottom action bar
@@ -371,7 +462,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ? _addToCart
                         : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2D5016),
+                      backgroundColor: const Color(0xFF1A5C38),
                       disabledBackgroundColor: Colors.grey.shade300,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -411,8 +502,78 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(10),
-        child: Icon(icon, size: 18, color: const Color(0xFF2D5016)),
+        child: Icon(icon, size: 18, color: const Color(0xFF1A5C38)),
       ),
+    );
+  }
+
+  Widget _buildReviewItem(Review r) {
+    final dateFormatted = r.createdAt.isNotEmpty 
+        ? DateFormat('dd MMM yyyy').format(DateTime.tryParse(r.createdAt) ?? DateTime.now())
+        : '';
+    final initial = r.reviewerName.isNotEmpty ? r.reviewerName[0].toUpperCase() : 'P';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: const Color(0xFF1A5C38).withValues(alpha: 0.1),
+              radius: 18,
+              child: Text(
+                initial,
+                style: const TextStyle(color: Color(0xFF1A5C38), fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    r.reviewerName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  Row(
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        index < r.rating.round() ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: Colors.amber,
+                        size: 14,
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            if (dateFormatted.isNotEmpty)
+              Text(
+                dateFormatted,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (r.comment != null && r.comment!.isNotEmpty)
+          Text(
+            r.comment!,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF374151), height: 1.5),
+          ),
+        if (r.imageUrl != null && r.imageUrl!.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              r.imageUrl!,
+              height: 80,
+              width: 80,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox(),
+            ),
+          ),
+        ]
+      ],
     );
   }
 }

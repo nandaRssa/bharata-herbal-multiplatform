@@ -25,10 +25,15 @@
 
                     @php
                     $eventMeta = [
-                        'order_created'     => ['label' => 'Pesanan Baru',         'icon' => '🛒', 'desc' => 'Saat pelanggan membuat pesanan baru'],
-                        'payment_confirmed' => ['label' => 'Pembayaran Dikonfirmasi','icon'=> '✅', 'desc' => 'Saat pembayaran berhasil diverifikasi'],
-                        'order_shipped'     => ['label' => 'Pesanan Dikirim',       'icon' => '🚚', 'desc' => 'Saat status pesanan berubah ke Dikirim'],
-                        'order_completed'   => ['label' => 'Pesanan Selesai',       'icon' => '🎉', 'desc' => 'Saat pesanan telah diterima pelanggan'],
+                        'order_created'           => ['label' => 'Pesanan Baru',              'icon' => '<i data-lucide="shopping-cart" class="w-5 h-5 inline-block"></i>',      'desc' => 'Saat pelanggan membuat pesanan baru'],
+                        'payment_proof_uploaded'  => ['label' => 'Bukti Pembayaran Diunggah',  'icon' => '<i data-lucide="file-text" class="w-5 h-5 inline-block"></i>',        'desc' => 'Saat pelanggan mengunggah bukti bayar'],
+                        'payment_confirmed'       => ['label' => 'Pembayaran Dikonfirmasi',    'icon' => '<i data-lucide="check-circle" class="w-5 h-5 inline-block"></i>',     'desc' => 'Saat pembayaran berhasil diverifikasi'],
+                        'order_processing'        => ['label' => 'Pesanan Diproses',           'icon' => '<i data-lucide="package" class="w-5 h-5 inline-block"></i>',          'desc' => 'Saat pesanan mulai diproses admin'],
+                        'order_shipped'           => ['label' => 'Pesanan Dikirim',            'icon' => '<i data-lucide="truck" class="w-5 h-5 inline-block"></i>',            'desc' => 'Saat pesanan dikirim ke alamat pelanggan'],
+                        'order_completed'         => ['label' => 'Pesanan Selesai',            'icon' => '<i data-lucide="check-circle" class="w-5 h-5 inline-block"></i>',     'desc' => 'Saat pesanan telah selesai diterima'],
+                        'order_cancelled'         => ['label' => 'Pesanan Dibatalkan',         'icon' => '<i data-lucide="x-circle" class="w-5 h-5 inline-block"></i>',        'desc' => 'Saat pesanan dibatalkan oleh pelanggan/admin'],
+                        'stock_low'               => ['label' => 'Stok Produk Menipis',        'icon' => '<i data-lucide="alert-triangle" class="w-5 h-5 inline-block"></i>',   'desc' => 'Saat stok produk di bawah batas minimum'],
+                        'new_review'              => ['label' => 'Review Baru dari Customer',  'icon' => '<i data-lucide="star" class="w-5 h-5 inline-block"></i>',            'desc' => 'Saat customer memberikan ulasan'],
                     ];
                     @endphp
 
@@ -41,7 +46,7 @@
                         <div class="flex items-center justify-between p-4 rounded-xl border {{ $isActive ? 'border-purple-200 bg-purple-50' : 'border-gray-200 bg-gray-50' }} transition"
                              id="event-card-{{ $event }}">
                             <div class="flex items-center gap-3">
-                                <span class="text-xl">{{ $meta['icon'] }}</span>
+                                {!! $meta['icon'] !!}
                                 <div>
                                     <p class="font-semibold text-sm text-gray-800">{{ $meta['label'] }}</p>
                                     <p class="text-xs text-gray-500">{{ $meta['desc'] }}</p>
@@ -134,6 +139,28 @@
                     <div id="test-wa-result" class="mt-3 hidden"></div>
                 </div>
 
+                {{-- ── FCM Push Notification ──────────────────────── --}}
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-bold text-gray-800 mb-5 flex items-center gap-2">
+                        <span class="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center">
+                            <i data-lucide="bell" class="w-4 h-4 text-red-600"></i>
+                        </span>
+                        Notifikasi Push (Firebase)
+                    </h3>
+
+                    <div class="grid grid-cols-1 gap-4 mb-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">FCM Server Key</label>
+                            <input type="text" name="fcm_server_key"
+                                   value="{{ old('fcm_server_key', $settings['fcm_server_key'] ?? '') }}"
+                                   class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-red-500/30 outline-none font-mono"
+                                   placeholder="AAAA...">
+                            @error('fcm_server_key')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
+                            <p class="mt-2 text-xs text-gray-500">🔑 Server Key dari Firebase Cloud Messaging. Digunakan untuk mengirim notifikasi push ke aplikasi mobile.</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             {{-- ── Right: Save + Info ─────────────────────────────── --}}
@@ -150,7 +177,7 @@
                         <div class="space-y-2 text-xs text-gray-500">
                             <p>📧 Email dikirim via log (simulasi)</p>
                             <p>📱 WhatsApp dikirim via log (simulasi)</p>
-                            <p>🔔 Toggle = perubahan visual langsung</p>
+                            <p><i data-lucide="bell" class="w-3 h-3 inline-block"></i> Toggle = perubahan visual langsung</p>
                             <p>💾 Simpan = simpan ke database</p>
                         </div>
                     </div>

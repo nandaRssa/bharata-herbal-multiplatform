@@ -44,4 +44,36 @@ class ProfileController extends Controller
 
         return $this->success(null, 'Password berhasil diperbarui.');
     }
+
+    public function updateFcmToken(Request $request)
+    {
+        $request->validate([
+            'fcm_token' => ['required', 'string'],
+        ]);
+
+        $request->user()->update([
+            'fcm_token' => $request->fcm_token,
+        ]);
+
+        return $this->success(null, 'FCM token berhasil disimpan.');
+    }
+
+    public function uploadPhoto(Request $request)
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+        ]);
+
+        $user = $request->user();
+
+        if ($request->hasFile('photo')) {
+            $file = $request->file('photo');
+            $filename = 'profile_' . $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move(public_path('foto_bharata'), $filename);
+
+            $user->update(['photo_url' => $filename]);
+        }
+
+        return $this->success(new UserResource($user->fresh()), 'Foto profil berhasil diperbarui.');
+    }
 }

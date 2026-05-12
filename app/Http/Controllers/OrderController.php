@@ -50,12 +50,18 @@ class OrderController extends Controller
         if ($order->user_id !== auth()->id()) {
             abort(403);
         }
+
+        $order->autoAdvanceStatus();
+
         $order->load([
             'items.product',
             'payment',
             'address',
             'reviews',
             'trackingUpdates',
+            'items.product.reviews' => function($query) {
+                $query->latest()->take(5);
+            }
         ]);
         return view('dashboard.order-detail', compact('order'));
     }
@@ -74,7 +80,12 @@ class OrderController extends Controller
             'cancel_reason' => 'required|string|max:500',
         ]);
 
-        DB::transaction(function () use ($order, $request) {
+        $reason = $request->cancel_reason;
+        if ($reason === 'Lainnya' && $request->filled('other_reason')) {
+            $reason = 'Lainnya: ' . $request->other_reason;
+        }
+
+        DB::transaction(function () use ($order, $reason) {
            
             foreach ($order->items as $item) {
                 $item->product->increment('stock', $item->quantity);
@@ -82,7 +93,7 @@ class OrderController extends Controller
 
             $order->update([
                 'status'        => 'cancelled',
-                'cancel_reason' => $request->cancel_reason,
+                'cancel_reason' => $reason,
             ]);
 
             if ($order->payment) {
@@ -90,7 +101,13 @@ class OrderController extends Controller
             }
         });
 
-        return redirect()->route('orders.index')->with('success', 'Pesanan berhasil dibatalkan.');
+        app(OrderEventNotificationService::class)->notify('order_cancelled', $order->load('user'));
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'redirect' => route('orders.index')]);
+        }
+
+        return redirect()->route('orders.show', $order)->with('cancel_success', true);
     }
 
     public function cancelItem(Request $request, Order $order, $itemId)
@@ -109,13 +126,18 @@ class OrderController extends Controller
             'cancel_reason' => 'required|string|max:500',
         ]);
 
-        DB::transaction(function () use ($item, $request) {
+        $reason = $request->cancel_reason;
+        if ($reason === 'Lainnya' && $request->filled('other_reason')) {
+            $reason = 'Lainnya: ' . $request->other_reason;
+        }
+
+        DB::transaction(function () use ($item, $reason) {
            
             $item->product->increment('stock', $item->quantity);
 
             $item->update([
                 'status'         => 'cancelled',
-                'cancel_reason'  => $request->cancel_reason,
+                'cancel_reason'  => $reason,
                 'cancelled_at'   => now(),
             ]);
 
@@ -129,6 +151,8 @@ class OrderController extends Controller
                 if ($order->payment) {
                     $order->payment->update(['status' => 'failed']);
                 }
+
+                app(OrderEventNotificationService::class)->notify('order_cancelled', $order->load('user'));
             }
         });
 
@@ -225,6 +249,12 @@ class OrderController extends Controller
             return back()->with('error', 'Pesanan ini tidak bisa dibayar (status: ' . $order->status_label . ').');
         }
 
+        // Redirect to upload proof page instead of instantly verifying
+        if ($order->payment && !in_array($order->payment->method, ['dana', 'gopay', 'qris'], true)) {
+            return redirect()->route('orders.show', $order)
+                ->with('info', 'Silakan unggah bukti pembayaran untuk melanjutkan.');
+        }
+
         DB::transaction(function () use ($order) {
             $order->update(['status' => 'processing']);
 
@@ -240,6 +270,73 @@ class OrderController extends Controller
 
         return redirect()->route('orders.show', $order)
             ->with('success', '✅ Pembayaran berhasil! Pesanan Anda sedang diproses.');
+    }
+
+    public function uploadProof(Request $request, Order $order)
+    {
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if (!$order->canUploadPaymentProof()) {
+            return back()->with('error', 'Bukti pembayaran tidak diperlukan untuk pesanan ini.');
+        }
+
+        $request->validate([
+            'proof_image' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ]);
+
+        $path = $request->file('proof_image')->store('payment_proofs', 'public');
+
+        $payment = $order->payment;
+        if (!$payment) {
+            $payment = $order->payment()->create([
+                'method' => 'bank_transfer',
+                'status' => 'pending_confirmation',
+                'amount' => $order->total_price,
+            ]);
+        }
+
+        $payment->update([
+            'proof_image' => $path,
+            'status' => 'pending_confirmation',
+        ]);
+
+        app(OrderEventNotificationService::class)->notify('payment_proof_uploaded', $order->load('user'));
+
+        return redirect()->route('orders.show', $order)
+            ->with('success', '✅ Bukti pembayaran berhasil diunggah! Status pesanan: Menunggu Konfirmasi Admin.');
+    }
+
+    public function complete(Order $order)
+    {
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($order->status !== 'shipped') {
+            return back()->with('error', 'Pesanan belum berstatus dikirim, tidak bisa dikonfirmasi.');
+        }
+
+        if (!$order->canConfirmReceived()) {
+            return back()->with('error', 'Pesanan masih dalam proses pengiriman. Silakan tunggu hingga paket sampai.');
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->update(['status' => 'completed']);
+
+            if ($order->payment && $order->payment->method === 'cod') {
+                $order->payment->update([
+                    'status' => 'verified',
+                    'paid_at' => now(),
+                ]);
+            }
+        });
+
+        app(OrderEventNotificationService::class)->notify('order_completed', $order->load('user'));
+
+        return redirect()->route('orders.show', $order)
+            ->with('success', '🎉 Pesanan berhasil dikonfirmasi sebagai diterima! Terima kasih sudah berbelanja.');
     }
 
     public function storeReview(Request $request, Order $order)

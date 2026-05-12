@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/address_provider.dart';
+import '../models/address_model.dart';
 import '../services/location_service.dart';
 
 class AddressFormScreen extends StatefulWidget {
-  const AddressFormScreen({super.key});
+  final Address? address;
+  const AddressFormScreen({super.key, this.address});
 
   @override
   State<AddressFormScreen> createState() => _AddressFormScreenState();
@@ -12,7 +14,7 @@ class AddressFormScreen extends StatefulWidget {
 
 class _AddressFormScreenState extends State<AddressFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _labelCtrl = TextEditingController(text: 'Rumah');
+  late final TextEditingController _labelCtrl;
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _streetCtrl = TextEditingController();
@@ -24,6 +26,24 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
   bool _isLocating = false; // loading state GPS
 
   final LocationService _locationService = LocationService();
+
+  bool get _isEditing => widget.address != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final a = widget.address;
+    _labelCtrl = TextEditingController(text: a?.label ?? 'Rumah');
+    if (a != null) {
+      _nameCtrl.text = a.recipientName;
+      _phoneCtrl.text = a.phone;
+      _streetCtrl.text = a.street;
+      _cityCtrl.text = a.city;
+      _provinceCtrl.text = a.province;
+      _postalCtrl.text = a.postalCode;
+      _isDefault = a.isDefault;
+    }
+  }
 
   @override
   void dispose() {
@@ -37,7 +57,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
     super.dispose();
   }
 
-  /// 📍 Auto-fill alamat menggunakan GPS
+  /// Auto-fill alamat menggunakan GPS
   Future<void> _autoFillFromGPS() async {
     setState(() => _isLocating = true);
     try {
@@ -63,7 +83,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                 Expanded(child: Text('Alamat berhasil diisi dari lokasi GPS!')),
               ],
             ),
-            backgroundColor: const Color(0xFF2D5016),
+            backgroundColor: const Color(0xFF1A5C38),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -88,7 +108,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
-    final ok = await context.read<AddressProvider>().addAddress({
+    final data = {
       'label': _labelCtrl.text.trim(),
       'recipient_name': _nameCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
@@ -97,7 +117,11 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
       'province': _provinceCtrl.text.trim(),
       'postal_code': _postalCtrl.text.trim(),
       'is_default': _isDefault,
-    });
+    };
+    final provider = context.read<AddressProvider>();
+    final ok = _isEditing
+        ? await provider.updateAddress(widget.address!.id, data)
+        : await provider.addAddress(data);
     if (!mounted) return;
     setState(() => _isLoading = false);
     if (ok) {
@@ -117,16 +141,16 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Tambah Alamat',
-          style: TextStyle(
-            color: Color(0xFF1E3A0F),
+        title: Text(
+          _isEditing ? 'Edit Alamat' : 'Tambah Alamat',
+          style: const TextStyle(
+            color: Color(0xFF0F3D25),
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0.5,
-        iconTheme: const IconThemeData(color: Color(0xFF1E3A0F)),
+        iconTheme: const IconThemeData(color: Color(0xFF0F3D25)),
       ),
       body: Form(
         key: _formKey,
@@ -140,14 +164,14 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF2D5016), Color(0xFF4A7C2C)],
+                    colors: [Color(0xFF1A5C38), Color(0xFF16A34A)],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF2D5016).withValues(alpha: 0.3),
+                      color: const Color(0xFF1A5C38).withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -179,7 +203,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                   label: Text(
                     _isLocating
                         ? 'Mendeteksi lokasi GPS...'
-                        : '📍 Gunakan Lokasi GPS Saat Ini',
+                        : 'Gunakan Lokasi GPS Saat Ini',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -281,11 +305,11 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                       height: 22,
                       decoration: BoxDecoration(
                         color: _isDefault
-                            ? const Color(0xFF2D5016)
+                            ? const Color(0xFF1A5C38)
                             : Colors.transparent,
                         border: Border.all(
                           color: _isDefault
-                              ? const Color(0xFF2D5016)
+                              ? const Color(0xFF1A5C38)
                               : Colors.grey.shade400,
                           width: 2,
                         ),
@@ -316,7 +340,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2D5016),
+                    backgroundColor: const Color(0xFF1A5C38),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
@@ -333,9 +357,9 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'Simpan Alamat',
-                          style: TextStyle(
+                      : Text(
+                          _isEditing ? 'Simpan Perubahan' : 'Simpan Alamat',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -365,10 +389,10 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: Color(0xFF4A7C2C)),
+        labelStyle: const TextStyle(color: Color(0xFF16A34A)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2D5016), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFF1A5C38), width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

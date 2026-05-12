@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Admin' }} — Bharata Herbal</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link rel="icon" type="image/jpeg" href="/images/logo-bharata.jpeg">
+    <link rel="icon" type="image/jpeg" href="/images/logo bharata.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="//unpkg.com/alpinejs" defer></script>
@@ -34,7 +34,7 @@
 
             {{-- Logo --}}
             <div class="px-4 py-3 flex items-center gap-2.5 border-b border-white/10">
-                <img src="{{ asset('images/logo-bharata.jpeg') }}"
+                <img src="{{ asset('images/logo bharata.png') }}"
                      alt="Logo Bharata Herbal"
                      class="h-10 w-10 rounded-full object-cover ring-2 ring-green-400/40 shrink-0">
                 <h1 class="font-semibold text-base tracking-wide leading-tight">Bharata Herbal</h1>
@@ -247,7 +247,7 @@
             {{-- Right side: Bell + User --}}
             <div class="flex items-center gap-2">
 
-                {{-- 🔔 Notification Bell --}}
+                {{-- Notification Bell --}}
                 @php $bellUnread = auth()->user()->unreadNotifications()->count(); @endphp
                 <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                     <button @click="open = !open"
@@ -287,7 +287,7 @@
                             <div class="px-4 py-3 hover:bg-gray-50 transition {{ !$notif->is_read ? 'bg-amber-50/30' : '' }}">
                                 <div class="flex items-start gap-2.5">
                                     <span class="text-sm mt-0.5 shrink-0">
-                                        {{ $notif->type === 'danger' ? '🔴' : ($notif->type === 'warning' ? '⚠️' : 'ℹ️') }}
+                                        {!! $notif->type === 'danger' ? '<i data-lucide="circle" class="w-4 h-4 inline-block text-red-500 fill-red-500"></i>' : ($notif->type === 'warning' ? '<i data-lucide="alert-triangle" class="w-4 h-4 inline-block text-amber-500"></i>' : '<i data-lucide="info" class="w-4 h-4 inline-block text-blue-500"></i>') !!}
                                     </span>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-xs font-semibold text-gray-800 leading-none">{{ $notif->title }}</p>
@@ -320,9 +320,13 @@
                 <div class="relative ml-1" x-data="{ open: false }" @click.away="open = false">
                     <button @click="open = !open"
                         class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full pl-1 pr-3 py-1 hover:bg-gray-100 transition">
+                        @if (auth()->user()->avatar_url)
+                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-7 h-7 rounded-full object-cover shrink-0">
+                        @else
                         <div class="w-7 h-7 rounded-full bg-green-800 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                            {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                            {{ auth()->user()->initials }}
                         </div>
+                        @endif
                         <div class="hidden sm:block leading-none text-left">
                             <p class="text-xs font-semibold text-gray-800">{{ auth()->user()->name }}</p>
                             <p class="text-[10px] text-gray-400 mt-0.5">{{ auth()->user()->role_label }}</p>
@@ -437,7 +441,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-<script src="/push-manager.js" defer></script>
+<script src="{{ asset('push-manager.js') }}" defer></script>
+<script src="{{ asset('notifications.js') }}"></script>
+<script src="{{ asset('notifications-polling.js') }}"></script>
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js');
+}
+</script>
 @stack('scripts')
 </body>
 </html>

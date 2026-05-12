@@ -28,14 +28,14 @@ class _AddressScreenState extends State<AddressScreen> {
         title: const Text(
           'Alamat Pengiriman',
           style: TextStyle(
-            color: Color(0xFF1E3A0F),
+            color: Color(0xFF0F3D25),
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0.5,
-        iconTheme: const IconThemeData(color: Color(0xFF1E3A0F)),
+        iconTheme: const IconThemeData(color: Color(0xFF0F3D25)),
         actions: [
           IconButton(
             onPressed: () async {
@@ -47,7 +47,7 @@ class _AddressScreenState extends State<AddressScreen> {
                 context.read<AddressProvider>().loadAddresses();
               }
             },
-            icon: const Icon(Icons.add_rounded, color: Color(0xFF2D5016)),
+            icon: const Icon(Icons.add_rounded, color: Color(0xFF1A5C38)),
           ),
         ],
       ),
@@ -55,7 +55,7 @@ class _AddressScreenState extends State<AddressScreen> {
         builder: (context, provider, _) {
           if (provider.isLoading) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2D5016)),
+              child: CircularProgressIndicator(color: Color(0xFF1A5C38)),
             );
           }
           if (provider.addresses.isEmpty) {
@@ -79,7 +79,7 @@ class _AddressScreenState extends State<AddressScreen> {
             context.read<AddressProvider>().loadAddresses();
           }
         },
-        backgroundColor: const Color(0xFF2D5016),
+        backgroundColor: const Color(0xFF1A5C38),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Tambah Alamat', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -98,7 +98,7 @@ class _AddressScreenState extends State<AddressScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: address.isDefault
-            ? Border.all(color: const Color(0xFF4A7C2C), width: 1.5)
+            ? Border.all(color: const Color(0xFF16A34A), width: 1.5)
             : null,
         boxShadow: [
           BoxShadow(
@@ -124,7 +124,7 @@ class _AddressScreenState extends State<AddressScreen> {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2D5016),
+                        color: const Color(0xFF1A5C38),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -146,12 +146,12 @@ class _AddressScreenState extends State<AddressScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFE8F5E9),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFF4A7C2C)),
+                          border: Border.all(color: const Color(0xFF16A34A)),
                         ),
                         child: const Text(
                           'Utama',
                           style: TextStyle(
-                            color: Color(0xFF2D5016),
+                            color: Color(0xFF1A5C38),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -161,14 +161,34 @@ class _AddressScreenState extends State<AddressScreen> {
                   ],
                 ),
                 PopupMenuButton<String>(
-                  onSelected: (val) {
-                    if (val == 'default') {
+                  onSelected: (val) async {
+                    if (val == 'edit') {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AddressFormScreen(address: address),
+                        ),
+                      );
+                      if (result == true && context.mounted) {
+                        context.read<AddressProvider>().loadAddresses();
+                      }
+                    } else if (val == 'default') {
                       provider.setDefault(address.id);
                     } else if (val == 'delete') {
                       _confirmDelete(context, address, provider);
                     }
                   },
                   itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, size: 18),
+                          SizedBox(width: 8),
+                          Text('Edit'),
+                        ],
+                      ),
+                    ),
                     if (!address.isDefault)
                       const PopupMenuItem(
                         value: 'default',
@@ -233,7 +253,7 @@ class _AddressScreenState extends State<AddressScreen> {
             child: const Icon(
               Icons.location_off_outlined,
               size: 64,
-              color: Color(0xFF4A7C2C),
+              color: Color(0xFF16A34A),
             ),
           ),
           const SizedBox(height: 24),
@@ -242,7 +262,7 @@ class _AddressScreenState extends State<AddressScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E3A0F),
+              color: Color(0xFF0F3D25),
             ),
           ),
           const SizedBox(height: 8),

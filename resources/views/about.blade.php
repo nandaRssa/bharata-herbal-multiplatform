@@ -39,12 +39,12 @@
             <h2 class="text-2xl font-bold text-gray-800 text-center mb-10">Nilai-Nilai Kami</h2>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 @foreach ([
-                    ['icon' => '🌱', 'title' => 'Alami', 'desc' => 'Bahan-bahan 100% alami tanpa bahan kimia berbahaya'],
-                    ['icon' => '✅', 'title' => 'Terpercaya', 'desc' => 'Produk telah diuji dan mendapat kepercayaan ribuan pelanggan'],
-                    ['icon' => '💚', 'title' => 'Peduli', 'desc' => 'Kami peduli pada kesehatan Anda dan kelestarian alam'],
+                    ['icon' => '<i data-lucide="sprout" class="w-10 h-10"></i>', 'title' => 'Alami', 'desc' => 'Bahan-bahan 100% alami tanpa bahan kimia berbahaya'],
+                    ['icon' => '<i data-lucide="shield-check" class="w-10 h-10"></i>', 'title' => 'Terpercaya', 'desc' => 'Produk telah diuji dan mendapat kepercayaan ribuan pelanggan'],
+                    ['icon' => '<i data-lucide="heart" class="w-10 h-10"></i>', 'title' => 'Peduli', 'desc' => 'Kami peduli pada kesehatan Anda dan kelestarian alam'],
                 ] as $val)
                 <div class="card p-6 text-center">
-                    <div class="text-4xl mb-3">{{ $val['icon'] }}</div>
+                    <div class="mb-3">{!! $val['icon'] !!}</div>
                     <h3 class="font-bold text-gray-800 mb-2">{{ $val['title'] }}</h3>
                     <p class="text-gray-500 text-sm">{{ $val['desc'] }}</p>
                 </div>

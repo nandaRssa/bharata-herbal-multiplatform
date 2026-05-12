@@ -9,6 +9,7 @@ class ReviewObserver
     public function created(Review $review)
     {
         $this->updateProductRating($review);
+        app(\App\Services\OrderEventNotificationService::class)->notifyNewReview($review);
     }
 
     public function updated(Review $review)

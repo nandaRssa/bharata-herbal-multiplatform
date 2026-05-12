@@ -33,9 +33,9 @@
     <form action="{{ route('admin.notifications.index') }}" method="GET" class="flex gap-3 mb-6">
         <select name="type" class="border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-green-500/30 outline-none">
             <option value="">Semua Tipe</option>
-            <option value="warning" {{ request('type') === 'warning' ? 'selected' : '' }}>⚠️ Peringatan</option>
-            <option value="danger"  {{ request('type') === 'danger'  ? 'selected' : '' }}>🔴 Stok Habis</option>
-            <option value="info"    {{ request('type') === 'info'    ? 'selected' : '' }}>ℹ️ Informasi</option>
+            <option value="warning" {{ request('type') === 'warning' ? 'selected' : '' }}>Peringatan</option>
+            <option value="danger"  {{ request('type') === 'danger'  ? 'selected' : '' }}>Stok Habis</option>
+            <option value="info"    {{ request('type') === 'info'    ? 'selected' : '' }}>Informasi</option>
         </select>
         <select name="is_read" class="border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-green-500/30 outline-none">
             <option value="">Semua Status</option>
@@ -55,14 +55,14 @@
         @forelse ($notifications as $notif)
         @php
             $typeConfig = match($notif->type) {
-                'danger'  => ['bg' => 'bg-red-50 border-red-200',   'dot' => 'bg-red-500',    'icon' => '🔴'],
-                'warning' => ['bg' => 'bg-yellow-50 border-yellow-200', 'dot' => 'bg-yellow-500', 'icon' => '⚠️'],
-                'success' => ['bg' => 'bg-green-50 border-green-200',  'dot' => 'bg-green-500',  'icon' => '✅'],
-                default   => ['bg' => 'bg-blue-50 border-blue-200',    'dot' => 'bg-blue-500',   'icon' => 'ℹ️'],
+                'danger'  => ['bg' => 'bg-red-50 border-red-200',   'dot' => 'bg-red-500',    'icon' => '<i data-lucide="circle" class="w-5 h-5 text-red-500 fill-red-500"></i>'],
+                'warning' => ['bg' => 'bg-yellow-50 border-yellow-200', 'dot' => 'bg-yellow-500', 'icon' => '<i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500"></i>'],
+                'success' => ['bg' => 'bg-green-50 border-green-200',  'dot' => 'bg-green-500',  'icon' => '<i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>'],
+                default   => ['bg' => 'bg-blue-50 border-blue-200',    'dot' => 'bg-blue-500',   'icon' => '<i data-lucide="info" class="w-5 h-5 text-blue-500"></i>'],
             };
         @endphp
         <div class="flex items-start gap-4 p-5 rounded-2xl border {{ !$notif->is_read ? $typeConfig['bg'] : 'bg-white border-gray-100' }} transition">
-            <span class="text-xl shrink-0 pt-0.5">{{ $typeConfig['icon'] }}</span>
+            <span class="shrink-0 pt-0.5">{!! $typeConfig['icon'] !!}</span>
             <div class="flex-1 min-w-0">
                 <div class="flex items-start justify-between gap-3">
                     <div>

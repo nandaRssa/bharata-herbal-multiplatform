@@ -24,7 +24,7 @@
             <div class="relative z-10 flex flex-col justify-center px-16 text-white">
                 {{-- Logo --}}
                 <a href="{{ route('home') }}" class="flex items-center gap-3 mb-16">
-                    <img src="{{ asset('images/logo-bharata.jpeg') }}" alt="Logo" class="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-lg">
+                    <img src="{{ asset('images/logo bharata.png') }}" alt="Logo" class="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-lg">
                     <div>
                         <span class="font-bold text-2xl tracking-tight">Bharata</span><span class="font-bold text-2xl text-emerald-300">Herbal</span>
                     </div>
@@ -60,7 +60,7 @@
             <div class="w-full max-w-md">
                 {{-- Mobile Logo --}}
                 <div class="lg:hidden flex items-center gap-3 mb-8 justify-center">
-                    <img src="{{ asset('images/logo-bharata.jpeg') }}" alt="Logo" class="w-12 h-12 rounded-xl object-cover shadow-sm">
+                    <img src="{{ asset('images/logo bharata.png') }}" alt="Logo" class="w-12 h-12 rounded-xl object-cover shadow-sm">
                     <span class="font-bold text-xl text-herbal-800">Bharata<span class="text-herbal-500">Herbal</span></span>
                 </div>
 

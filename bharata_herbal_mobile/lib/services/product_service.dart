@@ -1,13 +1,15 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../config/api_config.dart';
+import '../models/product_model.dart';
 
 class ProductService {
   final Dio dio = Dio(
     BaseOptions(
       baseUrl: ApiConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
 
       headers: {
         'Accept': 'application/json',
@@ -51,6 +53,22 @@ class ProductService {
         print('Categories error: $e');
       }
       return [];
+    }
+  }
+
+  Future<Product?> getProductById(int productId) async {
+    try {
+      final response = await dio.get('/products/$productId');
+      final data = response.data?['data'];
+      if (data != null) {
+        return Product.fromJson(data);
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Get product by id error: $e');
+      }
+      return null;
     }
   }
 }

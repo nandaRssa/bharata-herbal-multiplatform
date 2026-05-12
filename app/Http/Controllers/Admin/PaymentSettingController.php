@@ -11,7 +11,7 @@ class PaymentSettingController extends Controller
 {
     private const GROUP = 'payment';
 
-    private const METHODS = ['cod', 'dana', 'gopay', 'qris', 'bank_transfer'];
+    private const METHODS = ['cod', 'bank_transfer', 'dana', 'gopay', 'qris'];
 
     public function index()
     {
@@ -33,6 +33,21 @@ class PaymentSettingController extends Controller
         }
 
         Setting::set(self::GROUP, 'cod_fee', (int) $request->cod_fee, 'integer');
+
+        foreach (['dana', 'gopay', 'qris'] as $ew) {
+            if ($request->filled("{$ew}_merchant")) {
+                Setting::set(self::GROUP, "{$ew}_merchant", $request->input("{$ew}_merchant"), 'string');
+            }
+            if ($request->filled("{$ew}_qr")) {
+                Setting::set(self::GROUP, "{$ew}_qr", $request->input("{$ew}_qr"), 'string');
+            }
+            if ($request->filled("{$ew}_instructions")) {
+                Setting::set(self::GROUP, "{$ew}_instructions", $request->input("{$ew}_instructions"), 'string');
+            }
+        }
+
+        // Hapus format lama (JSON methods) jika masih ada
+        Setting::where('group', self::GROUP)->where('key', 'methods')->delete();
 
         return back()->with('success', 'Pengaturan pembayaran berhasil disimpan.');
     }

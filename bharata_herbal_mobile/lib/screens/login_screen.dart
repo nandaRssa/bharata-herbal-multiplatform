@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import 'main_screen.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,16 +44,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF4A7C2C), Color(0xFF2D5016)],
+                    colors: [Color(0xFF16A34A), Color(0xFF1A5C38)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(
-                  Icons.spa_rounded,
-                  color: Colors.white,
-                  size: 40,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 40,
+                    height: 40,
+                  ),
                 ),
               ),
 
@@ -64,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF1E3A0F),
+                  color: Color(0xFF0F3D25),
                 ),
               ),
               const SizedBox(height: 8),
@@ -101,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: const BorderSide(
-                      color: Color(0xFF4A7C2C),
+                      color: Color(0xFF16A34A),
                       width: 2,
                     ),
                   ),
@@ -133,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: const BorderSide(
-                      color: Color(0xFF4A7C2C),
+                      color: Color(0xFF16A34A),
                       width: 2,
                     ),
                   ),
@@ -153,7 +157,28 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 8),
+
+              // Lupa Password
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                  ),
+                  child: const Text(
+                    'Lupa Password?',
+                    style: TextStyle(
+                      color: Color(0xFF16A34A),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
 
               // Tombol Masuk
               SizedBox(
@@ -200,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2D5016),
+                        backgroundColor: const Color(0xFF1A5C38),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -245,7 +270,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: Color(0xFF4A7C2C)),
+                    side: const BorderSide(color: Color(0xFF16A34A)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -256,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D5016),
+                      color: Color(0xFF1A5C38),
                     ),
                   ),
                 ),
@@ -278,7 +303,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Text(
                     'Belum punya akun? Daftar sekarang',
                     style: TextStyle(
-                      color: Color(0xFF2D5016),
+                      color: Color(0xFF1A5C38),
                       fontWeight: FontWeight.bold,
                     ),
                   ),

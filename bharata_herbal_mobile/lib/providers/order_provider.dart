@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/order_model.dart';
 import '../services/order_service.dart';
@@ -26,9 +27,10 @@ class OrderProvider with ChangeNotifier {
     if (status != null) _statusFilter = status;
     notifyListeners();
     try {
-      _orders = await _service.getOrders(
+      final result = await _service.getOrders(
         status: _statusFilter.isEmpty ? null : _statusFilter,
       );
+      _orders = result['orders'] as List<Order>;
     } catch (e) {
       _error = 'Gagal memuat pesanan';
       debugPrint('Orders error: $e');
@@ -80,19 +82,15 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> submitReview(
+  Future<void> submitReview(
     int orderId,
     int productId,
     int rating,
     String comment,
+    {File? image}
   ) async {
-    try {
-      final ok = await _service.submitReview(orderId, productId, rating, comment);
-      if (ok) await loadOrderDetail(orderId);
-      return ok;
-    } catch (e) {
-      debugPrint('Submit review error: $e');
-      return false;
-    }
+    final ok = await _service.submitReview(orderId, productId, rating, comment, image: image);
+    if (!ok) throw Exception('Gagal mengirim ulasan');
+    await loadOrderDetail(orderId);
   }
 }

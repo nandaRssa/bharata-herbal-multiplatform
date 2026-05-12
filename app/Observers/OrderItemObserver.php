@@ -2,10 +2,16 @@
 
 namespace App\Observers;
 
+use App\Models\Order;
 use App\Models\OrderItem;
 
 class OrderItemObserver
 {
+    public function created(OrderItem $orderItem): void
+    {
+        $this->updateProductStats($orderItem);
+    }
+
     public function updated(OrderItem $orderItem)
     {
         if ($orderItem->isDirty('status')) {
@@ -13,11 +19,13 @@ class OrderItemObserver
         }
     }
 
-    private function updateProductStats(OrderItem $orderItem)
+    private function updateProductStats(OrderItem $orderItem): void
     {
-        if ($orderItem->order->status === 'completed' || in_array($orderItem->order->status, ['paid', 'processing', 'shipped'])) {
+        if (in_array((string) $orderItem->order?->status, Order::REVENUE_STATUSES, true)) {
             $product = $orderItem->product;
-            $product->updateSalesCount();
+            if ($product) {
+                $product->updateSalesCount();
+            }
         }
     }
 }

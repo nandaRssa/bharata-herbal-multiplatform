@@ -43,7 +43,9 @@ class ProductController extends Controller
     public function show(string $slug)
     {
         $product = Product::with('categories', 'reviews.user')
-            ->where('slug', $slug)
+            ->where(function ($q) use ($slug) {
+                $q->where('slug', $slug)->orWhere('id', $slug);
+            })
             ->availableForSale()
             ->firstOrFail();
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -35,9 +36,10 @@ class DashboardController extends Controller
             ->where('stock', '>', 0)
             ->count();
 
-        // Low stock products (less than 10 units)
+        // Low stock products
+        $stockMinimum = (int) (ProductSetting::first()?->minimum_stock_alert ?? 10);
         $lowStockProducts = Product::where('stock', '>', 0)
-            ->where('stock', '<', 10)
+            ->where('stock', '<', $stockMinimum)
             ->where('status', '!=', 'inactive')
             ->orderBy('stock', 'asc')
             ->take(5)
@@ -140,7 +142,7 @@ class DashboardController extends Controller
         return view('admin.dashboard', compact(
             'totalProducts', 'totalCustomers', 'totalOrders', 'totalSales',
             'activeProducts', 'lowStockProducts', 'outOfStockCount',
-            'todaySales', 'todayOrders',
+            'todaySales', 'todayOrders', 'stockMinimum',
             'newProducts', 'newCustomers', 'newOrders',
             'recentOrders', 'salesLabels', 'salesData', 'categoryData', 'topProducts',
             'orderStatusBreakdown', 'revenueByStatus'

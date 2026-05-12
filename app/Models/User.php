@@ -25,6 +25,8 @@ class User extends Authenticatable
         'phone',
         'role',
         'last_login',
+        'fcm_token',
+        'photo_url',
     ];
 
     protected $hidden = [
@@ -64,6 +66,22 @@ class User extends Authenticatable
             'customer'    => 'Customer',
             default       => 'Unknown',
         };
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->photo_url ? url('foto_bharata/' . $this->photo_url) : null;
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        $words = preg_split('/\s+/', trim((string) $this->name), -1, PREG_SPLIT_NO_EMPTY);
+        $initials = collect($words)
+            ->take(2)
+            ->map(fn ($word) => mb_substr($word, 0, 1))
+            ->implode('');
+
+        return mb_strtoupper($initials ?: 'U');
     }
 
     public function cart()

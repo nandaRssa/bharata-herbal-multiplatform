@@ -39,8 +39,9 @@ class SettingsSeeder extends Seeder
 
             ['group' => 'notification', 'key' => 'event_order_created',      'value' => '1',                    'type' => 'boolean'],
             ['group' => 'notification', 'key' => 'event_payment_confirmed',  'value' => '1',                    'type' => 'boolean'],
-            ['group' => 'notification', 'key' => 'event_order_shipped',      'value' => '1',                    'type' => 'boolean'],
-            ['group' => 'notification', 'key' => 'event_order_completed',    'value' => '1',                    'type' => 'boolean'],
+            ['group' => 'notification', 'key' => 'event_order_cancelled',    'value' => '1',                    'type' => 'boolean'],
+            ['group' => 'notification', 'key' => 'event_stock_low',          'value' => '1',                    'type' => 'boolean'],
+            ['group' => 'notification', 'key' => 'event_new_review',         'value' => '1',                    'type' => 'boolean'],
             ['group' => 'notification', 'key' => 'email_primary',            'value' => 'info@bharataherbal.id', 'type' => 'string'],
             ['group' => 'notification', 'key' => 'email_backup',             'value' => '',                     'type' => 'string'],
             ['group' => 'notification', 'key' => 'whatsapp_primary',         'value' => '+6281234567890',        'type' => 'string'],

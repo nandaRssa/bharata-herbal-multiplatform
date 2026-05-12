@@ -131,4 +131,23 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     return false;
   }
+
+  Future<String?> uploadPhoto(String filePath) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final avatarUrl = await _service.uploadPhoto(filePath);
+      if (avatarUrl != null) {
+        _user = await _service.getMe();
+      }
+      _isLoading = false;
+      notifyListeners();
+      return avatarUrl;
+    } catch (e) {
+      debugPrint('Upload photo error: $e');
+    }
+    _isLoading = false;
+    notifyListeners();
+    return null;
+  }
 }

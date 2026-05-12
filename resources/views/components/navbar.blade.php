@@ -8,7 +8,7 @@
 
             {{-- Logo --}}
             <a href="{{ route('home') }}" class="flex items-center gap-2 shrink-0">
-                <img src="{{ asset('images/logo-bharata.jpeg') }}" alt="Logo" class="w-10 h-10 rounded-xl object-cover shadow-sm border border-gray-100">
+                <img src="{{ asset('images/logo bharata.png') }}" alt="Logo" class="w-10 h-10 rounded-xl object-cover shadow-sm border border-gray-100">
                 <span class="font-bold text-herbal-800 text-lg tracking-tight">{{ $brandParts[0] ?? 'Bharata' }}<span class="text-herbal-500">{{ isset($brandParts[1]) ? ' ' . $brandParts[1] : '' }}</span></span>
             </a>
 
@@ -42,9 +42,13 @@
                 {{-- User Dropdown --}}
                 <div class="relative" x-data="{ open: false }">
                     <button @click="open = !open" class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-herbal-700 transition-colors">
+                        @if (auth()->user()->avatar_url)
+                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-8 h-8 rounded-full object-cover">
+                        @else
                         <div class="w-8 h-8 bg-herbal-100 rounded-full flex items-center justify-center">
-                            <span class="text-herbal-700 font-semibold text-xs">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
+                            <span class="text-herbal-700 font-semibold text-xs">{{ auth()->user()->initials }}</span>
                         </div>
+                        @endif
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>

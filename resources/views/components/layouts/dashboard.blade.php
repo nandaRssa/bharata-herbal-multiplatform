@@ -9,9 +9,13 @@
             <aside class="md:w-64 shrink-0">
                 <div class="card p-5 sticky top-24">
                     <div class="flex items-center gap-3 mb-5 pb-5 border-b border-gray-100">
+                        @if (auth()->user()->avatar_url)
+                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-12 h-12 rounded-full object-cover">
+                        @else
                         <div class="w-12 h-12 bg-herbal-100 rounded-full flex items-center justify-center">
-                            <span class="font-bold text-herbal-700 text-lg">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
+                            <span class="font-bold text-herbal-700 text-lg">{{ auth()->user()->initials }}</span>
                         </div>
+                        @endif
                         <div>
                             <p class="font-semibold text-gray-800">{{ auth()->user()->name }}</p>
                             <p class="text-xs text-gray-500">{{ auth()->user()->email }}</p>

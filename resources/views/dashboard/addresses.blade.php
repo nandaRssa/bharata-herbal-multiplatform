@@ -69,7 +69,7 @@
             {{-- Address list --}}
             @if ($addresses->isEmpty())
                 <div class="py-10 text-center text-gray-400">
-                    <p class="text-3xl mb-3">📍</p>
+                    <i data-lucide="map-pin" class="w-10 h-10 mb-3 mx-auto"></i>
                     <p class="font-semibold text-gray-600">Belum ada alamat tersimpan</p>
                     <p class="text-sm mt-1">Klik "Tambah Alamat" untuk menambahkan.</p>
                 </div>

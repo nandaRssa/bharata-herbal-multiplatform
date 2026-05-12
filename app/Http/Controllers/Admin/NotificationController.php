@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductSetting;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
@@ -41,13 +42,14 @@ class NotificationController extends Controller
     }
 
     /**
-     * Check for low stock products (< 10)
+     * Check for low stock products
      */
     public function checkLowStock(Request $request)
     {
+        $stockMin = (int) (ProductSetting::first()?->minimum_stock_alert ?? 10);
         $lastCheckTime = $request->query('last_check');
-        $query = Product::where('stock', '<', 10)
-            ->where('stock', '>', 0)  // Exclude out of stock
+        $query = Product::where('stock', '<', $stockMin)
+            ->where('stock', '>', 0)
             ->latest('updated_at');
 
         if ($lastCheckTime) {
@@ -77,7 +79,8 @@ class NotificationController extends Controller
      */
     public function getAllLowStock()
     {
-        $lowStockProducts = Product::where('stock', '<', 10)
+        $stockMin = (int) (ProductSetting::first()?->minimum_stock_alert ?? 10);
+        $lowStockProducts = Product::where('stock', '<', $stockMin)
             ->where('stock', '>', 0)
             ->orderBy('stock', 'asc')
             ->take(10)
@@ -98,7 +101,8 @@ class NotificationController extends Controller
             ->orWhere('status', 'paid')
             ->count();
 
-        $lowStockCount = Product::where('stock', '<', 10)
+        $stockMin = (int) (ProductSetting::first()?->minimum_stock_alert ?? 10);
+        $lowStockCount = Product::where('stock', '<', $stockMin)
             ->where('stock', '>', 0)
             ->count();
 

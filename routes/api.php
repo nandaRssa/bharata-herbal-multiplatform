@@ -8,15 +8,22 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\StoreInfoController;
+use App\Http\Controllers\Api\VoucherController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Public Routes ───────────────────────────────────────────────
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login',    [AuthController::class, 'login']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
 
 Route::get('/products',        [ProductController::class, 'index']);
 Route::get('/products/{slug}', [ProductController::class, 'show']);
 Route::get('/categories',      [ProductController::class, 'categories']);
+
+// Store config — public, used by mobile to read admin settings dynamically
+Route::get('/store-info',      [StoreInfoController::class, 'index']);
 
 // ─── Authenticated Routes (Sanctum Token) ────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
@@ -39,13 +46,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/checkout', [CheckoutController::class, 'store']);
 
     // Orders
-    Route::get('/orders',                     [OrderController::class, 'index']);
-    Route::get('/orders/{order}',             [OrderController::class, 'show']);
-    Route::post('/orders/{order}/cancel',     [OrderController::class, 'cancel']);
-    Route::post('/orders/{order}/pay',        [OrderController::class, 'payNow']);
-    Route::post('/orders/{order}/buy-again',  [OrderController::class, 'buyAgain']);
+    Route::get('/orders',                           [OrderController::class, 'index']);
+    Route::get('/orders/{order}',                   [OrderController::class, 'show']);
+    Route::post('/orders/{order}/cancel',           [OrderController::class, 'cancel']);
+    Route::post('/orders/{order}/pay',              [OrderController::class, 'payNow']);
+    Route::post('/orders/{order}/buy-again',        [OrderController::class, 'buyAgain']);
+    Route::post('/orders/{order}/confirm-received', [OrderController::class, 'confirmReceived']);
+    Route::post('/orders/{order}/upload-proof',     [OrderController::class, 'uploadProof']);
 
-    // Reviews
+    // Voucher
+    Route::post('/vouchers/validate',               [VoucherController::class, 'validate']);
     Route::post('/orders/{order}/reviews',    [ReviewController::class, 'store']);
     Route::delete('/reviews/{review}',        [ReviewController::class, 'destroy']);
 
@@ -54,9 +64,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile',            [ProfileController::class, 'update']);
     Route::put('/profile/password',   [ProfileController::class, 'updatePassword']);
 
+    // FCM Token
+    Route::post('/fcm-token',         [ProfileController::class, 'updateFcmToken']);
+
+    // Profile Photo
+    Route::post('/profile/photo',     [ProfileController::class, 'uploadPhoto']);
+
     // Addresses
     Route::get('/addresses',                   [AddressController::class, 'index']);
     Route::post('/addresses',                  [AddressController::class, 'store']);
+    Route::put('/addresses/{address}',         [AddressController::class, 'update']);
     Route::delete('/addresses/{address}',      [AddressController::class, 'destroy']);
     Route::patch('/addresses/{address}/default', [AddressController::class, 'setDefault']);
 });

@@ -1,3 +1,5 @@
+import 'review_model.dart';
+
 class Product {
   final int id;
   final String name;
@@ -8,8 +10,10 @@ class Product {
   final String imageUrl;
   final int stock;
   final double rating;
+  final int ratingCount;
   final String? benefits;
   final String? ingredients;
+  final List<Review> reviews;
 
   Product({
     required this.id,
@@ -21,8 +25,10 @@ class Product {
     required this.imageUrl,
     required this.stock,
     required this.rating,
+    required this.ratingCount,
     this.benefits,
     this.ingredients,
+    this.reviews = const [],
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -36,8 +42,12 @@ class Product {
       imageUrl: json['image_url'] ?? '',
       stock: json['stock'] ?? 0,
       rating: double.tryParse(json['rating'].toString()) ?? 0.0,
+      ratingCount: json['rating_count'] ?? 0,
       benefits: json['benefits'],
-      ingredients: json['ingredients'],
+      ingredients: json['ingredients'] ?? json['composition'],
+      reviews: json['reviews'] != null
+          ? (json['reviews'] as List).map((v) => Review.fromJson(v)).toList()
+          : [],
     );
   }
 }

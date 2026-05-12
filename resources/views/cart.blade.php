@@ -47,7 +47,7 @@
                         onsubmit="return confirm('Apakah Anda yakin ingin menghapus semua item dari keranjang?')">
                         @csrf
                         <button type="submit" class="text-xs font-medium text-red-600 hover:text-red-700 ml-4 px-2 py-1 hover:bg-red-50 rounded transition">
-                            🗑 Hapus Semua
+                            <i data-lucide="trash-2" class="w-4 h-4 inline-block"></i> Hapus Semua
                         </button>
                     </form>
                 </div>

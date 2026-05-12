@@ -24,6 +24,22 @@ class UserDashboardController extends Controller
         return back()->with('success', 'Profil berhasil diperbarui.');
     }
 
+    public function uploadPhoto(Request $request)
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+        ]);
+
+        $user = $request->user();
+        $file = $request->file('photo');
+        $filename = 'profile_' . $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+
+        $file->move(public_path('foto_bharata'), $filename);
+        $user->update(['photo_url' => $filename]);
+
+        return back()->with('success', 'Foto profil berhasil diperbarui.');
+    }
+
     public function changePassword(Request $request)
     {
         $request->validate([

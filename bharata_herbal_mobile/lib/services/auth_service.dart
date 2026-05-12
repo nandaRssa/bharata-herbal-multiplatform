@@ -7,8 +7,8 @@ class AuthService {
   final Dio _dio = Dio(
     BaseOptions(
       baseUrl: ApiConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
       headers: {'Accept': 'application/json'},
     ),
   );
@@ -96,5 +96,41 @@ class AuthService {
       options: options,
     );
     return response.data['success'] == true;
+  }
+
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final response = await _dio.post('/forgot-password', data: {'email': email});
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> resetPassword(
+    String email,
+    String token,
+    String password,
+    String passwordConfirmation,
+  ) async {
+    final response = await _dio.post('/reset-password', data: {
+      'email': email,
+      'token': token,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+    });
+    return response.data;
+  }
+
+  Future<String?> uploadPhoto(String filePath) async {
+    final options = await _authOptions();
+    final formData = FormData.fromMap({
+      'photo': await MultipartFile.fromFile(filePath, filename: 'profile.jpg'),
+    });
+    final response = await _dio.post(
+      '/profile/photo',
+      data: formData,
+      options: options,
+    );
+    if (response.data['success'] == true) {
+      return response.data['data']['avatar'] as String?;
+    }
+    return null;
   }
 }

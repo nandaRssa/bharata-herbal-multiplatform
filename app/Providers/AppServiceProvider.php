@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Models\CartItem;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Review;
+use App\Observers\OrderObserver;
 use App\Observers\OrderItemObserver;
 use App\Observers\ReviewObserver;
 use App\Policies\CartItemPolicy;
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
 
         Review::observe(ReviewObserver::class);
         OrderItem::observe(OrderItemObserver::class);
+        Order::observe(OrderObserver::class);
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             $schedule->command('app:cancel-expired-orders')->everyMinute();

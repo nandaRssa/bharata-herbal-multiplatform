@@ -40,18 +40,19 @@ class Product extends Model
         });
 
         static::updated(function ($product) {
-           
             if ($product->wasChanged('stock')) {
                 static::dispatchStockNotification($product);
+                static::dispatchStockLowEventNotification($product);
             }
         });
     }
 
     public static function resolveStatus(int $stock): string
     {
-        $autoNonaktif  = (bool) Setting::get('product', 'auto_nonaktif_stok_habis', true);
-        $autoWarning   = (bool) Setting::get('product', 'auto_warning_stok_minimum', true);
-        $stockMinimum  = (int)  Setting::get('product', 'stock_minimum', 10);
+        $productSetting = ProductSetting::first();
+        $autoNonaktif   = $productSetting?->auto_disable_when_out_of_stock ?? true;
+        $autoWarning    = $productSetting?->alert_when_below_minimum ?? true;
+        $stockMinimum   = (int) ($productSetting?->minimum_stock_alert ?? 10);
 
         if ($stock === 0 && $autoNonaktif) {
             return 'inactive';
@@ -66,13 +67,14 @@ class Product extends Model
 
     public static function dispatchStockNotification(Product $product): void
     {
-        $notifType = Setting::get('product', 'notification_type', 'dashboard');
+        $productSetting = ProductSetting::first();
+        $notifType = $productSetting?->notify_email_admin ? 'email' : 'dashboard';
 
         if ($product->status === 'inactive') {
             $message = "Stok produk **{$product->name}** telah habis (0). Produk dinonaktifkan otomatis.";
             $type    = 'danger';
         } elseif ($product->status === 'warning') {
-            $stockMin = Setting::get('product', 'stock_minimum', 10);
+            $stockMin = ProductSetting::first()?->minimum_stock_alert ?? 10;
             $message  = "Stok produk **{$product->name}** di bawah minimum ({$product->stock} dari min. {$stockMin}).";
             $type     = 'warning';
         } else {
@@ -97,6 +99,17 @@ class Product extends Model
             foreach ($admins as $admin) {
                 \App\Services\StockNotificationMailer::send($admin, $product, $message);
             }
+        }
+    }
+
+    public static function dispatchStockLowEventNotification(Product $product): void
+    {
+        $oldStock = (int) $product->getOriginal('stock');
+        $newStock = (int) $product->stock;
+        $stockMinimum = (int) (ProductSetting::first()?->minimum_stock_alert ?? 10);
+
+        if ($newStock > 0 && $newStock <= $stockMinimum && $oldStock > $newStock) {
+            app(\App\Services\OrderEventNotificationService::class)->notifyStockLow($product);
         }
     }
 
@@ -213,6 +226,7 @@ class Product extends Model
     public function updateSalesCount()
     {
         $salesCount = $this->orderItems()
+            ->where('status', '!=', 'cancelled')
             ->whereHas('order', function ($query) {
                 $query->whereIn('status', Order::REVENUE_STATUSES);
             })

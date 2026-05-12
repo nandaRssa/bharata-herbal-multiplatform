@@ -35,6 +35,21 @@ class AddressProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> updateAddress(int id, Map<String, dynamic> data) async {
+    try {
+      final address = await _service.updateAddress(id, data);
+      final index = _addresses.indexWhere((a) => a.id == id);
+      if (index != -1) {
+        _addresses[index] = address;
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Update address error: $e');
+      return false;
+    }
+  }
+
   Future<void> deleteAddress(int id) async {
     try {
       await _service.deleteAddress(id);

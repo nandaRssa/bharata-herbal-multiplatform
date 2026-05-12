@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -27,6 +29,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
+  // Avatar
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploadingPhoto = false;
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +55,39 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     _newPassCtrl.dispose();
     _confirmPassCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhoto() async {
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Foto Profil', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        content: const Text('Pilih sumber foto:'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context, ImageSource.camera),
+            icon: const Icon(Icons.camera_alt_outlined),
+            label: const Text('Kamera'),
+          ),
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context, ImageSource.gallery),
+            icon: const Icon(Icons.photo_library_outlined),
+            label: const Text('Galeri'),
+          ),
+        ],
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await _picker.pickImage(source: source, imageQuality: 80, maxWidth: 512, maxHeight: 512);
+    if (picked == null) return;
+
+    setState(() => _isUploadingPhoto = true);
+    final avatarUrl = await context.read<AuthProvider>().uploadPhoto(picked.path);
+    if (!mounted) return;
+    setState(() => _isUploadingPhoto = false);
+    _snack(avatarUrl != null ? 'Foto profil berhasil diperbarui!' : 'Gagal mengunggah foto', ok: avatarUrl != null);
   }
 
   Future<void> _saveProfile() async {
@@ -92,7 +131,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: ok ? const Color(0xFF2D5016) : Colors.red.shade700,
+        backgroundColor: ok ? const Color(0xFF1A5C38) : Colors.red.shade700,
       ),
     );
   }
@@ -105,18 +144,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         title: const Text(
           'Edit Profil',
           style: TextStyle(
-            color: Color(0xFF1E3A0F),
+            color: Color(0xFF0F3D25),
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF1E3A0F)),
+        iconTheme: const IconThemeData(color: Color(0xFF0F3D25)),
         bottom: TabBar(
           controller: _tabCtrl,
-          labelColor: const Color(0xFF2D5016),
+          labelColor: const Color(0xFF1A5C38),
           unselectedLabelColor: Colors.grey,
-          indicatorColor: const Color(0xFF2D5016),
+          indicatorColor: const Color(0xFF1A5C38),
           tabs: const [
             Tab(text: 'Data Diri'),
             Tab(text: 'Password'),
@@ -134,11 +173,78 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
   }
 
   Widget _buildProfileTab() {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    final provider = context.watch<AuthProvider>();
+    final user = provider.user;
+    final isLoading = provider.isLoading;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
+          // Avatar
+          GestureDetector(
+            onTap: _isUploadingPhoto ? null : _pickPhoto,
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 56,
+                  backgroundColor: const Color(0xFFE8F5E9),
+                  backgroundImage: (user?.avatar.isNotEmpty ?? false)
+                      ? NetworkImage(user!.avatar)
+                      : null,
+                  child: (user?.avatar.isNotEmpty ?? false)
+                      ? null
+                      : Text(
+                          user?.name.isNotEmpty == true
+                              ? user!.name[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF16A34A),
+                          ),
+                        ),
+                ),
+                if (_isUploadingPhoto)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.black26,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1A5C38),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: _pickPhoto,
+            child: const Text(
+              'Ketuk untuk ganti foto',
+              style: TextStyle(fontSize: 12, color: Color(0xFF16A34A)),
+            ),
+          ),
+          const SizedBox(height: 24),
           _field(
             controller: _nameCtrl,
             label: 'Nama Lengkap',
@@ -164,7 +270,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             child: ElevatedButton(
               onPressed: isLoading ? null : _saveProfile,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2D5016),
+                backgroundColor: const Color(0xFF1A5C38),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(
@@ -203,7 +309,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             'Ubah Password',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E3A0F),
+              color: Color(0xFF0F3D25),
               fontSize: 18,
             ),
           ),
@@ -239,7 +345,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             child: ElevatedButton(
               onPressed: isLoading ? null : _savePassword,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2D5016),
+                backgroundColor: const Color(0xFF1A5C38),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(
@@ -278,11 +384,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Color(0xFF4A7C2C)),
-        prefixIcon: Icon(icon, color: const Color(0xFF4A7C2C)),
+        labelStyle: const TextStyle(color: Color(0xFF16A34A)),
+        prefixIcon: Icon(icon, color: const Color(0xFF16A34A)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2D5016), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFF1A5C38), width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -307,8 +413,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       obscureText: obscure,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Color(0xFF4A7C2C)),
-        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF4A7C2C)),
+        labelStyle: const TextStyle(color: Color(0xFF16A34A)),
+        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF16A34A)),
         suffixIcon: IconButton(
           icon: Icon(
             obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -318,7 +424,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2D5016), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFF1A5C38), width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

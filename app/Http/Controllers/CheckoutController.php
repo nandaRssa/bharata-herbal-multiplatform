@@ -158,7 +158,7 @@ class CheckoutController extends Controller
 
     private function activePaymentMethods(): array
     {
-        $allMethods = ['cod', 'dana', 'gopay', 'qris', 'bank_transfer'];
+        $allMethods = ['cod', 'bank_transfer', 'dana', 'gopay', 'qris'];
 
         $activeMethods = array_values(array_filter(
             $allMethods,

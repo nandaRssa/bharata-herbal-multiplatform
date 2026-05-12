@@ -42,8 +42,8 @@
                            focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400
                            appearance-none cursor-pointer transition w-48">
                         <option value="">Semua Status</option>
-                        <option value="pending" {{ $status === 'pending'    ? 'selected' : '' }}>Belum Dibayar</option>
-                        <option value="paid" {{ $status === 'paid'       ? 'selected' : '' }}>Dibayar</option>
+                        <option value="pending" {{ $status === 'pending'    ? 'selected' : '' }}>Menunggu</option>
+                        <option value="paid" {{ $status === 'paid'       ? 'selected' : '' }}>Sudah Bayar</option>
                         <option value="processing" {{ $status === 'processing' ? 'selected' : '' }}>Diproses</option>
                         <option value="shipped" {{ $status === 'shipped'    ? 'selected' : '' }}>Dikirim</option>
                         <option value="completed" {{ $status === 'completed'  ? 'selected' : '' }}>Selesai</option>
@@ -72,7 +72,8 @@
             @php
             $tabs = [
             '' => ['label' => 'Semua', 'count' => $totalAll],
-            'pending' => ['label' => 'Belum Dibayar', 'count' => $statusCounts['pending'] ?? 0],
+            'pending' => ['label' => 'Menunggu', 'count' => $statusCounts['pending'] ?? 0],
+            'paid' => ['label' => 'Sudah Bayar', 'count' => $statusCounts['paid'] ?? 0],
             'processing' => ['label' => 'Diproses', 'count' => $statusCounts['processing'] ?? 0],
             'shipped' => ['label' => 'Dikirim', 'count' => $statusCounts['shipped'] ?? 0],
             'completed' => ['label' => 'Selesai', 'count' => $statusCounts['completed'] ?? 0],
@@ -127,13 +128,7 @@
             @csrf
             <select name="status" id="bulkStatusSelect" required
                     class="px-3 py-2 text-sm bg-white border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">-- Ubah Status Ke --</option>
-                <option value="pending">Belum Dibayar</option>
-                <option value="paid">Dibayar</option>
-                <option value="processing">Diproses</option>
-                <option value="shipped">Dikirim</option>
-                <option value="completed">Selesai</option>
-                <option value="cancelled">Dibatalkan</option>
+                <option value="">-- Pilih Aksi Valid --</option>
             </select>
             <button type="submit" class="px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
                 Terapkan
@@ -223,7 +218,7 @@
 
                         {{-- Checkbox --}}
                         <td class="px-4 py-4 whitespace-nowrap" onclick="event.stopPropagation();">
-                            <input type="checkbox" name="order_ids[]" value="{{ $order->id }}" class="w-4 h-4 cursor-pointer rounded border-gray-300 text-blue-600 order-checkbox"
+                            <input type="checkbox" name="order_ids[]" value="{{ $order->id }}" data-allowed-statuses="{{ implode(',', array_values($order->allowedNextStatuses())) }}" class="w-4 h-4 cursor-pointer rounded border-gray-300 text-blue-600 order-checkbox"
                                    onchange="updateBulkActionBar()">
                         </td>
 
@@ -390,6 +385,11 @@
     </div>
 
     <script>
+    const bulkStatusLabels = {
+        processing: 'Diproses',
+        cancelled: 'Dibatalkan',
+    };
+
     function toggleSelectAll(checkbox) {
         const checkboxes = document.querySelectorAll('.order-checkbox');
         checkboxes.forEach(cb => cb.checked = checkbox.checked);
@@ -400,12 +400,32 @@
         const selectedCheckboxes = document.querySelectorAll('.order-checkbox:checked');
         const bulkActionBar = document.getElementById('bulkActionBar');
         const selectedCount = document.getElementById('selectedCount');
+        const bulkStatusSelect = document.getElementById('bulkStatusSelect');
         
         if (selectedCheckboxes.length > 0) {
             selectedCount.textContent = selectedCheckboxes.length;
             bulkActionBar.classList.remove('hidden');
+            const allowedGroups = Array.from(selectedCheckboxes).map(cb =>
+                (cb.dataset.allowedStatuses || '').split(',').filter(Boolean)
+            );
+            const allowedIntersection = allowedGroups.reduce((carry, current) =>
+                carry.filter(status => current.includes(status))
+            , allowedGroups[0] || []);
+            const validBulkStatuses = allowedIntersection.filter(status => Object.prototype.hasOwnProperty.call(bulkStatusLabels, status));
+
+            bulkStatusSelect.innerHTML = '<option value="">-- Pilih Aksi Valid --</option>';
+            validBulkStatuses.forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.textContent = bulkStatusLabels[status];
+                bulkStatusSelect.appendChild(option);
+            });
+
+            bulkStatusSelect.disabled = validBulkStatuses.length === 0;
         } else {
             bulkActionBar.classList.add('hidden');
+            bulkStatusSelect.innerHTML = '<option value="">-- Pilih Aksi Valid --</option>';
+            bulkStatusSelect.disabled = false;
         }
     }
 
@@ -426,7 +446,7 @@
         }
         
         if (!document.getElementById('bulkStatusSelect').value) {
-            alert('Silakan pilih status yang akan diterapkan');
+            alert('Tidak ada aksi massal yang valid untuk kombinasi pesanan yang dipilih');
             return false;
         }
 

@@ -1,5 +1,5 @@
 <x-layouts.admin>
-    <x-slot name="title">Detail Pesanan
+    <x-slot name="title">Detail Pesanan</x-slot>
 
     @php
     $latestTracking = $order->trackingUpdates->sortByDesc('created_at')->first();
@@ -19,10 +19,11 @@
                 <div>
                     <label class="form-label">Status</label>
                     <select name="status" id="order-status-input" class="form-input py-2 text-sm">
-                        @foreach (['pending' => 'Menunggu Pembayaran', 'paid' => 'Dibayar', 'processing' => 'Sedang Diproses', 'shipped' => 'Dikirim', 'completed' => 'Selesai', 'cancelled' => 'Dibatalkan'] as $val => $lbl)
+                        @foreach ($statusOptions as $val => $lbl)
                         <option value="{{ $val }}" {{ $order->status === $val ? 'selected' : '' }}>{{ $lbl }}</option>
                         @endforeach
                     </select>
+                    <p class="mt-1 text-xs text-gray-400">Status hanya bisa maju sesuai tahap pesanan agar alurnya tetap konsisten.</p>
                 </div>
                 <div class="shipping-only {{ $isShipped ? '' : 'hidden' }}">
                     <label class="form-label">No. Resi Pengiriman</label>
@@ -111,10 +112,29 @@
                 @if ($order->payment)
                 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <h4 class="font-semibold text-gray-700 mb-2 text-sm">Pembayaran</h4>
-                    <div class="text-sm space-y-1">
+                    <div class="text-sm space-y-2">
                         <div class="flex justify-between"><span class="text-gray-500">Metode</span><span class="font-medium">{{ $order->payment->method_label }}</span></div>
                         @php $ps = $order->payment->status === 'verified' ? 'green' : ($order->payment->status === 'failed' ? 'red' : 'yellow') @endphp
-                        <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="badge bg-{{ $ps }}-100 text-{{ $ps }}-700 font-semibold">{{ ucfirst($order->payment->status) }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="badge bg-{{ $ps }}-100 text-{{ $ps }}-700 font-semibold">{{ $order->payment->status_label }}</span></div>
+                        @if ($order->payment->paid_at)
+                        <div class="flex justify-between"><span class="text-gray-500">Waktu Konfirmasi</span><span class="font-medium text-gray-800">{{ $order->payment->paid_at->format('d M Y, H:i') }} WIB</span></div>
+                        @endif
+                        @if ($order->payment->proof_image)
+                        <div class="pt-3 border-t border-gray-100 space-y-3">
+                            <span class="text-gray-500 block">Bukti Transfer</span>
+                            <a href="{{ asset('storage/' . $order->payment->proof_image) }}" target="_blank" class="block overflow-hidden rounded-xl border border-gray-200">
+                                <img src="{{ asset('storage/' . $order->payment->proof_image) }}" alt="Bukti pembayaran" class="w-full h-48 object-cover">
+                            </a>
+                            @if ($order->canTransitionTo('paid'))
+                            <form action="{{ route('admin.orders.confirm-proof', $order) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="w-full rounded-xl bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800 transition">
+                                    Konfirmasi Pembayaran Customer
+                                </button>
+                            </form>
+                            @endif
+                        </div>
+                        @endif
                     </div>
                 </div>
                 @endif

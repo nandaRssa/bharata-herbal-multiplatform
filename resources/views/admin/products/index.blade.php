@@ -66,9 +66,9 @@
                 class="h-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-600
                        focus:outline-none focus:ring-2 focus:ring-green-500/30 shadow-sm transition">
             <option value="">Semua Status</option>
-            <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>✅ Aktif</option>
-            <option value="warning"  {{ request('status') === 'warning'  ? 'selected' : '' }}>⚠️ Peringatan</option>
-            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>🔴 Nonaktif</option>
+            <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>Aktif</option>
+            <option value="warning"  {{ request('status') === 'warning'  ? 'selected' : '' }}>Peringatan</option>
+            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Nonaktif</option>
         </select>
     </form>
 

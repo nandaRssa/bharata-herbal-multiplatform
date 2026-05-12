@@ -1,19 +1,62 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'base_service.dart';
 import '../models/address_model.dart';
 import '../models/cart_model.dart';
 
-/// Payment method yang ditampilkan di UI (user-friendly)
-enum PaymentMethod {
-  cod('cash_on_delivery', 'Bayar di Tempat (COD)', '💵'),
-  transfer('transfer', 'Transfer Bank', '🏦'),
-  ewallet('transfer', 'E-Wallet (GoPay/OVO/Dana)', '📱'); // backend maps to transfer
+const _paymentLabels = {
+  'cod': ('Bayar di Tempat (COD)', Icons.payments_rounded),
+  'bank_transfer': ('Transfer Bank', Icons.account_balance_rounded),
+  'dana': ('DANA', Icons.account_balance_wallet_rounded),
+  'gopay': ('GoPay', Icons.phone_android_rounded),
+  'qris': ('QRIS', Icons.qr_code_rounded),
+};
 
-  final String backendValue; // nilai yang dikirim ke API
+class PaymentOption {
+  final String backendValue;
   final String label;
-  final String emoji;
+  final IconData icon;
 
-  const PaymentMethod(this.backendValue, this.label, this.emoji);
+  const PaymentOption({
+    required this.backendValue,
+    required this.label,
+    required this.icon,
+  });
+}
+
+List<PaymentOption> buildPaymentOptions(List<String> methods) {
+  return methods.map((method) {
+    final info = _paymentLabels[method] ?? (method.toUpperCase(), Icons.credit_card_rounded);
+
+    return PaymentOption(
+      backendValue: method,
+      label: info.$1,
+      icon: info.$2,
+    );
+  }).toList();
+}
+
+class ShippingCourier {
+  final String code;
+  final String label;
+  final double cost;
+  final int estimatedDays;
+
+  const ShippingCourier({
+    required this.code,
+    required this.label,
+    required this.cost,
+    required this.estimatedDays,
+  });
+
+  factory ShippingCourier.fromJson(Map<String, dynamic> json) {
+    return ShippingCourier(
+      code: json['code']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
+      cost: double.tryParse(json['cost'].toString()) ?? 0,
+      estimatedDays: int.tryParse(json['estimated_days'].toString()) ?? 0,
+    );
+  }
 }
 
 class CheckoutSummary {
@@ -21,10 +64,16 @@ class CheckoutSummary {
   final List<Map<String, dynamic>> selectedItems;
   final List<Address> addresses;
   final Address? defaultAddress;
-  final List<String> paymentMethods;
+  final List<PaymentOption> paymentOptions;
+  final String shippingMethod;
+  final List<ShippingCourier> couriers;
+  final String? defaultCourierCode;
   final List<Map<String, dynamic>> bankAccounts;
   final double subtotal;
   final double shippingCost;
+  final double freeShippingMin;
+  final bool isFreeShipping;
+  final double codFee;
   final double total;
   final double minimumOrderAmount;
   final bool isMinimumMet;
@@ -34,86 +83,131 @@ class CheckoutSummary {
     required this.selectedItems,
     required this.addresses,
     this.defaultAddress,
-    required this.paymentMethods,
+    required this.paymentOptions,
+    required this.shippingMethod,
+    required this.couriers,
+    required this.defaultCourierCode,
     required this.bankAccounts,
     required this.subtotal,
     required this.shippingCost,
+    required this.freeShippingMin,
+    required this.isFreeShipping,
+    required this.codFee,
     required this.total,
     required this.minimumOrderAmount,
     required this.isMinimumMet,
   });
+
+  bool get usesCourierSelection => shippingMethod == 'automatic' && couriers.isNotEmpty;
+
+  ShippingCourier? findCourier(String? code) {
+    if (code == null) return null;
+
+    for (final courier in couriers) {
+      if (courier.code == code) {
+        return courier;
+      }
+    }
+
+    return null;
+  }
+
+  double shippingCostFor(ShippingCourier? courier) {
+    if (isFreeShipping) return 0;
+    if (usesCourierSelection && courier != null) return courier.cost;
+    return shippingCost;
+  }
+
+  double totalFor(PaymentOption option, {double discount = 0, ShippingCourier? courier}) {
+    final shipping = shippingCostFor(courier);
+    final fee = option.backendValue == 'cod' ? codFee : 0;
+
+    return (subtotal + shipping + fee - discount).clamp(0, double.infinity);
+  }
 }
 
 class CheckoutService extends BaseService {
   Future<CheckoutSummary> getCheckoutSummary() async {
     final options = await authOptions();
     final response = await dio.get('/checkout', options: options);
-    final d = response.data['data'];
+    final data = response.data['data'];
 
-    // payment_methods bisa berupa JSON string atau array
-    final rawMethods = d['payment_methods'];
-    List<String> paymentMethods;
+    final rawMethods = data['payment_methods'];
+    List<String> methodKeys;
     if (rawMethods is List) {
-      paymentMethods = List<String>.from(rawMethods);
+      methodKeys = List<String>.from(rawMethods);
     } else if (rawMethods is String) {
       try {
-        final decoded = (rawMethods.isNotEmpty)
+        methodKeys = rawMethods.isNotEmpty
             ? List<String>.from(jsonDecode(rawMethods))
             : <String>[];
-        paymentMethods = decoded;
       } catch (_) {
-        paymentMethods = [];
+        methodKeys = [];
       }
     } else {
-      paymentMethods = [];
+      methodKeys = [];
     }
 
-    // bank_accounts — filter only valid keys
-    final rawBanks = d['bank_accounts'] as List<dynamic>? ?? [];
-    final bankAccounts = rawBanks.map<Map<String, dynamic>>((b) {
-      final map = Map<String, dynamic>.from(b as Map);
-      // Buang key yang aneh / bukan kolom DB asli
-      map.removeWhere((k, v) => k.contains('"') || k.contains('notes'));
-      return map;
-    }).toList();
+    if (methodKeys.isEmpty) {
+      methodKeys = ['bank_transfer', 'cod'];
+    }
+
+    final rawCouriers = data['couriers'] as List<dynamic>? ?? [];
+    final couriers = rawCouriers
+        .map((courier) => ShippingCourier.fromJson(Map<String, dynamic>.from(courier as Map)))
+        .toList();
+
+    final rawBanks = data['bank_accounts'] as List<dynamic>? ?? [];
+    final bankAccounts = rawBanks
+        .map<Map<String, dynamic>>((bank) => Map<String, dynamic>.from(bank as Map))
+        .toList();
 
     return CheckoutSummary(
-      cart: Cart.fromJson(d['cart']),
-      selectedItems: List<Map<String, dynamic>>.from(
-        d['selected_items'] ?? [],
-      ),
-      addresses: (d['addresses'] as List<dynamic>? ?? [])
-          .map((a) => Address.fromJson(a))
+      cart: Cart.fromJson(data['cart']),
+      selectedItems: List<Map<String, dynamic>>.from(data['selected_items'] ?? []),
+      addresses: (data['addresses'] as List<dynamic>? ?? [])
+          .map((address) => Address.fromJson(address))
           .toList(),
-      defaultAddress: d['default_address'] != null
-          ? Address.fromJson(d['default_address'])
+      defaultAddress: data['default_address'] != null
+          ? Address.fromJson(data['default_address'])
           : null,
-      paymentMethods: paymentMethods,
+      paymentOptions: buildPaymentOptions(methodKeys),
+      shippingMethod: data['shipping_method']?.toString() ?? 'flat_rate',
+      couriers: couriers,
+      defaultCourierCode: data['default_courier_code']?.toString(),
       bankAccounts: bankAccounts,
-      subtotal: double.tryParse(d['subtotal'].toString()) ?? 0,
-      shippingCost: double.tryParse(d['shipping_cost'].toString()) ?? 0,
-      total: double.tryParse(d['total'].toString()) ?? 0,
-      minimumOrderAmount:
-          double.tryParse(d['minimum_order_amount'].toString()) ?? 0,
-      isMinimumMet: d['is_minimum_met'] ?? false,
+      subtotal: double.tryParse(data['subtotal'].toString()) ?? 0,
+      shippingCost: double.tryParse(data['shipping_cost'].toString()) ?? 0,
+      freeShippingMin: double.tryParse(data['free_shipping_min'].toString()) ?? 0,
+      isFreeShipping: data['is_free_shipping'] == true,
+      codFee: double.tryParse(data['cod_fee'].toString()) ?? 0,
+      total: double.tryParse(data['total'].toString()) ?? 0,
+      minimumOrderAmount: double.tryParse(data['minimum_order_amount'].toString()) ?? 0,
+      isMinimumMet: data['is_minimum_met'] ?? false,
     );
   }
 
   Future<Map<String, dynamic>> placeOrder({
     required int addressId,
-    required PaymentMethod paymentMethod,
+    required PaymentOption paymentOption,
+    String? courierCode,
     String notes = '',
+    String? voucherCode,
   }) async {
     final options = await authOptions();
     final response = await dio.post(
       '/checkout',
       data: {
         'address_id': addressId,
-        'payment_method': paymentMethod.backendValue, // mapping ke backend value
+        'payment_method': paymentOption.backendValue,
+        if (courierCode != null && courierCode.isNotEmpty) 'courier_code': courierCode,
         'notes': notes,
+        if (voucherCode != null && voucherCode.isNotEmpty)
+          'voucher_code': voucherCode.toUpperCase().trim(),
       },
       options: options,
     );
+
     return response.data;
   }
 }

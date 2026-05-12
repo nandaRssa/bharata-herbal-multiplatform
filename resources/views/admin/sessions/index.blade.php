@@ -57,7 +57,7 @@
                         </div>
                         <div class="text-xs text-gray-500 space-y-0.5">
                             <p>🌐 Browser: <strong>{{ $session->browser ?? '-' }}</strong></p>
-                            <p>📍 IP: <strong>{{ $session->ip_address ?? '-' }}</strong></p>
+                            <p><i data-lucide="map-pin" class="w-4 h-4 inline-block"></i> IP: <strong>{{ $session->ip_address ?? '-' }}</strong></p>
                             @if($session->location)
                             <p>🗺 Lokasi: <strong>{{ $session->location }}</strong></p>
                             @endif

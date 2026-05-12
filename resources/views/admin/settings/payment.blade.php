@@ -22,11 +22,11 @@
 
                 @php
                 $methodLabels = [
-                    'cod'           => ['label' => 'Bayar di Tempat (COD)',   'icon' => '🏠', 'desc' => 'Bayar saat produk tiba'],
-                    'dana'          => ['label' => 'Dana',                     'icon' => '💙', 'desc' => 'Transfer via aplikasi Dana'],
-                    'gopay'         => ['label' => 'GoPay',                    'icon' => '💚', 'desc' => 'Transfer via GoPay'],
-                    'qris'          => ['label' => 'QRIS',                     'icon' => '🔲', 'desc' => 'Scan kode QR universal'],
-                    'bank_transfer' => ['label' => 'Bank Transfer',            'icon' => '🏦', 'desc' => 'Transfer ATM / Mobile Banking'],
+                    'cod'           => ['label' => 'Bayar di Tempat (COD)',   'icon' => '<i data-lucide="home" class="w-6 h-6 inline-block"></i>', 'desc' => 'Bayar saat produk tiba'],
+                    'bank_transfer' => ['label' => 'Transfer Bank',            'icon' => '<i data-lucide="landmark" class="w-6 h-6 inline-block"></i>', 'desc' => 'Konfirmasi manual via rekening toko'],
+                    'dana'          => ['label' => 'DANA',                     'icon' => '<i data-lucide="smartphone" class="w-6 h-6 inline-block"></i>', 'desc' => 'Pembayaran via dompet digital DANA'],
+                    'gopay'         => ['label' => 'GoPay',                    'icon' => '<i data-lucide="smartphone" class="w-6 h-6 inline-block"></i>', 'desc' => 'Pembayaran via dompet digital GoPay'],
+                    'qris'          => ['label' => 'QRIS',                     'icon' => '<i data-lucide="qr-code" class="w-6 h-6 inline-block"></i>', 'desc' => 'Scan QRIS via aplikasi pembayaran'],
                 ];
                 @endphp
 
@@ -38,7 +38,7 @@
                            id="method-card-{{ $key }}"
                            onclick="toggleMethod('{{ $key }}', this)">
                         <div class="flex items-center gap-3">
-                            <span class="text-2xl">{{ $meta['icon'] }}</span>
+                            {!! $meta['icon'] !!}
                             <div>
                                 <p class="font-semibold text-sm text-gray-800">{{ $meta['label'] }}</p>
                                 <p class="text-xs text-gray-500">{{ $meta['desc'] }}</p>
@@ -75,6 +75,46 @@
                         <span class="text-xs text-gray-400">/ pesanan</span>
                     </div>
                     <p class="text-xs text-gray-400 mt-2">Biaya ini otomatis ditambahkan ke total pesanan COD.</p>
+                </div>
+
+                {{-- E-Wallet Credentials --}}
+                <div class="border-t border-gray-100 pt-5 mt-5 space-y-4">
+                    <h4 class="font-semibold text-gray-700 text-sm flex items-center gap-2">
+                        <i data-lucide="smartphone" class="w-4 h-4 text-blue-500"></i>
+                        Kredensial E-Wallet
+                    </h4>
+                    @foreach (['dana', 'gopay', 'qris'] as $ew)
+                    @php $ewActive = $settings["method_{$ew}"] ?? false; @endphp
+                    <div id="ewallet-creds-{{ $ew }}" class="p-4 rounded-xl border {{ $ewActive ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50 hidden' }}">
+                        <p class="font-semibold text-sm text-gray-700 mb-3 flex items-center gap-2">
+                            @php $ewIcons = ['dana' => '<i data-lucide="smartphone" class="w-5 h-5"></i>', 'gopay' => '<i data-lucide="smartphone" class="w-5 h-5"></i>', 'qris' => '<i data-lucide="qr-code" class="w-5 h-5"></i>']; @endphp
+                            {!! $ewIcons[$ew] ?? '<i data-lucide="credit-card" class="w-5 h-5"></i>' !!}
+                            {{ strtoupper($ew) }}
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Nama Merchant</label>
+                                <input type="text" name="{{ $ew }}_merchant"
+                                       value="{{ $settings["{$ew}_merchant"] ?? '' }}"
+                                       placeholder="Nama merchant terdaftar"
+                                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500/30 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">URL QR Code</label>
+                                <input type="text" name="{{ $ew }}_qr"
+                                       value="{{ $settings["{$ew}_qr"] ?? '' }}"
+                                       placeholder="https://example.com/qr/{{ $ew }}.png"
+                                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500/30 outline-none">
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Instruksi Pembayaran</label>
+                            <textarea name="{{ $ew }}_instructions" rows="2"
+                                      placeholder="1. Buka aplikasi {{ strtoupper($ew) }}&#10;2. ..."
+                                      class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500/30 outline-none">{{ $settings["{$ew}_instructions"] ?? '' }}</textarea>
+                        </div>
+                    </div>
+                    @endforeach
                 </div>
 
                 <div class="mt-5 flex justify-end">
@@ -234,6 +274,18 @@ function toggleMethod(key, card) {
         card.classList.replace('bg-green-50','bg-gray-50');
         bg.classList.replace('bg-green-600','bg-gray-300');
         dot.classList.remove('translate-x-5');
+    }
+
+    // Show/hide e-wallet credential fields
+    const creds = document.getElementById('ewallet-creds-' + key);
+    if (creds) {
+        if (cb.checked) {
+            creds.classList.remove('hidden');
+            creds.classList.replace('border-gray-200','border-green-200');
+            creds.classList.replace('bg-gray-50','bg-green-50');
+        } else {
+            creds.classList.add('hidden');
+        }
     }
 }
 

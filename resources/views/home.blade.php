@@ -1,4 +1,9 @@
 <x-app-layout>
+    @php
+    $storeName = \App\Models\Setting::get('store', 'store_name', 'Bharata Herbal');
+    $storeDescription = \App\Models\Setting::get('store', 'store_description', 'Produk herbal alami berkualitas tinggi dari Nusantara.');
+    $brandParts = preg_split('/\s+/', trim($storeName), 2);
+    @endphp
     <x-slot name="title">Beranda</x-slot>
 
     {{-- ============ HERO ============ --}}
@@ -15,11 +20,11 @@
                     🌿 100% Alami & Terpercaya
                 </span>
                 <h1 class="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight">
-                    Produk Alami dari<br>
+                    Produk Herbal dari<br>
                     <span class="text-herbal-300">Alam Nusantara</span>
                 </h1>
                 <p class="mt-6 text-lg text-herbal-200 leading-relaxed max-w-xl">
-                    Temukan rangkaian produk herbal premium yang diformulasikan dari bahan-bahan alami terbaik pilihan nusantara untuk menjaga kesehatan dan vitalitas Anda.
+                    {{ $storeDescription }}
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 mt-10">
                     <a href="{{ route('shop') }}"
@@ -97,7 +102,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-end justify-between mb-10">
                 <div>
-                    <h2 class="section-title">🔥 Produk Terlaris</h2>
+                    <h2 class="section-title flex items-center gap-2"><i data-lucide="flame" class="w-6 h-6 text-orange-500"></i> Produk Terlaris</h2>
                     <p class="section-subtitle">Paling banyak dibeli pelanggan kami</p>
                 </div>
                 <a href="{{ route('shop') }}?sort=rating" class="btn-outline text-sm py-2 px-4 hidden sm:inline-flex">
@@ -122,16 +127,16 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
             @php
                 $categoryIcons = [
-                    'pencernaan' => ['icon' => '🫁', 'desc' => 'Solusi alami untuk sistem pencernaan yang sehat'],
-                    'persendian' => ['icon' => '💪', 'desc' => 'Jaga fleksibilitas dan kekuatan sendi Anda'],
-                    'ginjal'     => ['icon' => '💧', 'desc' => 'Dukung fungsi ginjal yang optimal'],
+                    'pencernaan' => ['icon' => '<i data-lucide="heart" class="w-10 h-10"></i>', 'desc' => 'Solusi alami untuk sistem pencernaan yang sehat'],
+                    'persendian' => ['icon' => '<i data-lucide="activity" class="w-10 h-10"></i>', 'desc' => 'Jaga fleksibilitas dan kekuatan sendi Anda'],
+                    'ginjal'     => ['icon' => '<i data-lucide="droplets" class="w-10 h-10"></i>', 'desc' => 'Dukung fungsi ginjal yang optimal'],
                 ];
             @endphp
             @forelse ($categories as $category)
-                @php $info = $categoryIcons[$category->slug] ?? ['icon' => '🌿', 'desc' => $category->description ?? ''] @endphp
+                @php $info = $categoryIcons[$category->slug] ?? ['icon' => '<i data-lucide="leaf" class="w-10 h-10"></i>', 'desc' => $category->description ?? ''] @endphp
                 <a href="{{ route('shop') }}?category={{ $category->slug }}"
                    class="group card p-8 text-center hover:border-herbal-300 hover:bg-herbal-50 transition-all">
-                    <div class="text-5xl mb-4">{{ $info['icon'] }}</div>
+                    <div class="mb-4">{!! $info['icon'] !!}</div>
                     <h3 class="text-xl font-bold text-gray-800 group-hover:text-herbal-700 transition-colors">{{ $category->name }}</h3>
                     <p class="text-sm text-gray-500 mt-2">{{ $info['desc'] }}</p>
                     <p class="text-xs text-herbal-600 font-semibold mt-3">{{ $category->products_count }} Produk →</p>

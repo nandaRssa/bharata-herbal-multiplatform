@@ -138,13 +138,7 @@
                             </span>
 
                             @elseif ($order->status === 'processing' && $item->status === 'active')
-                            @if ($item->canBeCancelled())
-                            <button type="button"
-                                @click="openCancelItem({{ $order->id }}, {{ $item->id }}, '{{ addslashes($item->product->name) }}')"
-                                class="text-xs font-medium border border-red-300 text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg transition">
-                                Batalkan Produk
-                            </button>
-                            @endif
+                            <span class="text-xs text-gray-400 px-3 py-2">Pesanan sedang diproses</span>
                             <a href="https://wa.me/" target="_blank"
                                 class="text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-lg transition inline-flex items-center gap-1.5">
                                 💬 Chat Penjual
@@ -155,6 +149,16 @@
                                 class="text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-lg transition">
                                 Detail Pesanan
                             </a>
+                            @if ($order->canConfirmReceived())
+                            <form action="{{ route('orders.complete', $order) }}" method="POST" class="inline" onsubmit="return confirm('Konfirmasi bahwa pesanan sudah diterima?')">
+                                @csrf
+                                <button type="submit" class="text-xs font-semibold bg-herbal-700 hover:bg-herbal-800 text-white px-4 py-2 rounded-lg transition">
+                                    ✓ Konfirmasi Diterima
+                                </button>
+                            </form>
+                            @else
+                            <span class="text-xs text-gray-400 px-3 py-2">Pesanan masih dalam proses pengiriman</span>
+                            @endif
                             <a href="https://wa.me/" target="_blank"
                                 class="text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-lg transition inline-flex items-center gap-1.5">
                                 💬 Chat Penjual
@@ -282,21 +286,23 @@
                             <div class="space-y-2 mb-5">
                                 @php
                                 $cancelReasons = [
-                                'Salah memilih produk atau varian',
-                                'Ingin mengubah alamat pengiriman',
-                                'Harga terlalu mahal / menemukan harga lebih murah',
-                                'Estimasi pengiriman terlalu lama',
-                                'Kendala dengan metode pembayaran',
+                                'Berubah pikiran',
+                                'Menemukan harga lebih murah',
+                                'Salah memilih produk',
+                                'Pengiriman terlalu lama',
                                 'Lainnya',
                                 ];
                                 @endphp
                                 @foreach ($cancelReasons as $reason)
-                                <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition">
+                                <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition" onclick="toggleOtherReason(this)">
                                     <input type="radio" name="cancel_reason" value="{{ $reason }}"
-                                        class="text-red-500 focus:ring-red-400" required>
+                                        class="text-red-500 focus:ring-red-400 cancel-reason-radio" required>
                                     <span class="text-sm text-gray-700">{{ $reason }}</span>
                                 </label>
                                 @endforeach
+                                <div id="other-reason-wrapper" class="hidden mb-2">
+                                    <textarea name="other_reason" rows="2" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 outline-none resize-none" placeholder="Tuliskan alasan Anda..."></textarea>
+                                </div>
                             </div>
 
                             <div class="flex gap-3">
@@ -341,20 +347,23 @@
                             <div class="space-y-2 mb-5">
                                 @php
                                 $cancelReasons = [
-                                'Salah memilih',
+                                'Salah memilih produk',
                                 'Harga terlalu mahal',
                                 'Ingin batal sebagian',
-                                'Stok terbatas',
+                                'Pengiriman terlalu lama',
                                 'Lainnya',
                                 ];
                                 @endphp
                                 @foreach ($cancelReasons as $reason)
-                                <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition">
+                                <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition" onclick="toggleOtherReason(this)">
                                     <input type="radio" name="cancel_reason" value="{{ $reason }}"
-                                        class="text-red-500 focus:ring-red-400" required>
+                                        class="text-red-500 focus:ring-red-400 cancel-reason-radio" required>
                                     <span class="text-sm text-gray-700">{{ $reason }}</span>
                                 </label>
                                 @endforeach
+                            </div>
+                            <div id="other-reason-wrapper" class="hidden mb-4">
+                                <textarea name="other_reason" rows="2" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 outline-none resize-none" placeholder="Tuliskan alasan Anda..."></textarea>
                             </div>
 
                             <div class="flex gap-3">
@@ -613,6 +622,20 @@
                 this.showCancelDetail = false;
                 this.showMyReview = false;
             }
+        }
+    }
+
+    // Toggle "Lainnya" textarea
+    function toggleOtherReason(label) {
+        const radio = label.querySelector('.cancel-reason-radio');
+        const wrapper = document.getElementById('other-reason-wrapper');
+        const input = wrapper?.querySelector('textarea');
+        if (radio && radio.value === 'Lainnya') {
+            if (wrapper) wrapper.classList.remove('hidden');
+            if (input) input.required = true;
+        } else {
+            if (wrapper) wrapper.classList.add('hidden');
+            if (input) input.required = false;
         }
     }
 

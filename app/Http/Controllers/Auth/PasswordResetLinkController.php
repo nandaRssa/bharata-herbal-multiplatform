@@ -27,9 +27,41 @@ class PasswordResetLinkController extends Controller
             $request->only('email')
         );
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        if ($status == Password::RESET_LINK_SENT) {
+            // In debug/local mode, extract the reset URL from the log file
+            // so developers can test without a real mail server
+            if (config('app.debug') || app()->environment('local')) {
+                $logPath = storage_path('logs/laravel.log');
+                if (file_exists($logPath)) {
+                    // Read last 50KB of log to find the latest reset link
+                    $logSize = filesize($logPath);
+                    $readSize = min($logSize, 50 * 1024);
+                    $handle = fopen($logPath, 'r');
+                    fseek($handle, -$readSize, SEEK_END);
+                    $logContent = fread($handle, $readSize);
+                    fclose($handle);
+
+                    // Extract all reset-password URLs and take the last one
+                    if (preg_match_all(
+                        '/reset-password\/([a-zA-Z0-9]+)\?email=([^\s\"\'\\\\\n]+)/',
+                        $logContent,
+                        $matches
+                    )) {
+                        $lastIdx = count($matches[0]) - 1;
+                        $token = $matches[1][$lastIdx];
+                        $email = urldecode($matches[2][$lastIdx]);
+                        // Clean up any trailing characters
+                        $email = preg_replace('/[^a-zA-Z0-9@._\-].*$/', '', $email);
+                        $resetUrl = route('password.reset', ['token' => $token, 'email' => $email]);
+                        session(['dev_reset_url' => $resetUrl]);
+                    }
+                }
+            }
+
+            return back()->with('status', __($status));
+        }
+
+        return back()->withInput($request->only('email'))
+                     ->withErrors(['email' => __($status)]);
     }
 }

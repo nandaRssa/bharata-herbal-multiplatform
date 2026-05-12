@@ -38,7 +38,7 @@ class OrderItem extends Model
             return false;
         }
 
-        if (in_array($this->order->status, ['shipped', 'completed', 'cancelled'])) {
+        if (in_array($this->order->status, ['processing', 'shipped', 'completed', 'cancelled'])) {
             return false;
         }
 

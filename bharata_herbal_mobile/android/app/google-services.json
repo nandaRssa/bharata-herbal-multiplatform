@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "717559879182",
+    "project_id": "bharata-herbal-multiplatform",
+    "storage_bucket": "bharata-herbal-multiplatform.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:717559879182:android:5c92715825e62d82270e5f",
+        "android_client_info": {
+          "package_name": "com.example.bharata_herbal_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCl5OaIaLMs0IPEKvEGPZ72i3nW0mvl3-I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

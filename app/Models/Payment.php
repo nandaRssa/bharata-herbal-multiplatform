@@ -10,8 +10,8 @@ class Payment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'order_id', 'method', 'status', 'proof',
-        'account_name', 'account_number', 'paid_at', 'payment_deadline',
+        'order_id', 'method', 'status', 'proof', 'proof_image',
+        'account_name', 'account_number', 'amount', 'paid_at', 'payment_deadline',
     ];
 
     protected $casts = [
@@ -28,10 +28,11 @@ class Payment extends Model
     {
         $labels = [
             'cod'          => 'Bayar di Tempat (COD)',
+            'cash_on_delivery' => 'Bayar di Tempat (COD)',
             'dana'         => 'Dana',
             'gopay'        => 'GoPay',
             'qris'         => 'QRIS',
-            'bank_transfer'=> 'Virtual Account / Bank Transfer',
+            'bank_transfer'=> 'Transfer Bank',
             'ewallet'      => 'E-Wallet',
         ];
         return $labels[$this->method] ?? ucfirst($this->method);
@@ -39,10 +40,17 @@ class Payment extends Model
 
     public function getStatusLabelAttribute(): string
     {
+        if ($this->status === 'pending' && $this->method === 'cod') {
+            return $this->order?->status === 'completed'
+                ? 'Dibayar'
+                : 'Bayar Saat Diterima (COD)';
+        }
+
         $labels = [
             'pending'  => 'Menunggu Pembayaran',
+            'pending_confirmation' => 'Menunggu Konfirmasi Admin',
             'paid'     => 'Dibayar',
-            'verified' => 'Dikonfirmasi',
+            'verified' => 'Pembayaran Terkonfirmasi',
             'failed'   => 'Gagal',
         ];
         return $labels[$this->status] ?? ucfirst($this->status);

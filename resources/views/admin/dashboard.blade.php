@@ -231,8 +231,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="space-y-1">
             <p class="text-2xl font-bold text-gray-900">{{ $lowStockProducts->count() + $outOfStockCount }}</p>
             <div class="text-xs text-gray-500 space-y-0.5">
-                <p>⚠️ {{ $lowStockProducts->count() }} produk stok menipis</p>
-                <p>🚫 {{ $outOfStockCount }} produk habis</p>
+                <p><i data-lucide="alert-triangle" class="w-4 h-4 inline-block text-amber-500"></i> {{ $lowStockProducts->count() }} produk stok menipis</p>
+                <p><i data-lucide="ban" class="w-4 h-4 inline-block text-red-500"></i> {{ $outOfStockCount }} produk habis</p>
             </div>
         </div>
     </div>
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="flex-1 min-w-0">
             <h3 class="font-semibold text-red-900 mb-1">Perhatian: Stok Produk Menipis</h3>
             <p class="text-sm text-red-800 mb-3">
-                Ada {{ $lowStockProducts->count() }} produk dengan stok kurang dari 10 unit dan {{ $outOfStockCount }} produk yang habis.
+                Ada {{ $lowStockProducts->count() }} produk dengan stok kurang dari {{ $stockMinimum }} unit dan {{ $outOfStockCount }} produk yang habis.
             </p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 @foreach($lowStockProducts as $product)

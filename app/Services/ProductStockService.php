@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Models\Setting;
+use App\Models\ProductSetting;
 use Illuminate\Support\Facades\Log;
 
 class ProductStockService
@@ -50,7 +50,7 @@ class ProductStockService
             'active'   => Product::where('status', 'active')->count(),
             'warning'  => Product::where('status', 'warning')->count(),
             'inactive' => Product::where('status', 'inactive')->count(),
-            'minimum'  => (int) Setting::get('product', 'stock_minimum', 10),
+            'minimum'  => (int) (ProductSetting::first()?->minimum_stock_alert ?? 10),
         ];
     }
 }

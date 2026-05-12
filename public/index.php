@@ -1,5 +1,9 @@
 <?php
 
+header('Service-Worker-Allowed: /');
+header('Content-Security-Policy: default-src * data: blob:; script-src * data: blob:; style-src * data: blob:; img-src * data: blob:; connect-src * data: blob: ws: wss:;');
+header('Access-Control-Allow-Origin: *');
+
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 

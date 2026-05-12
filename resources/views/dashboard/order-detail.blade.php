@@ -419,25 +419,43 @@
             @endif
             <div class="flex flex-wrap gap-3">
                 @if ($order->status === 'pending')
-                <form action="{{ route('orders.pay-now', $order) }}" method="POST"
-                    onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='⌛ Memproses...'">
-                    @csrf
-                    <button type="submit"
-                        class="btn-primary py-2.5 px-6 text-sm">
-                        ⚡ Bayar Sekarang
-                    </button>
-                </form>
+                @if ($order->hasUploadedProof())
+                <span class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm font-medium">
+                    ⏳ Menunggu Konfirmasi Admin
+                </span>
+                @elseif ($order->canUploadPaymentProof())
+                <button type="button" onclick="document.getElementById('upload-proof-modal').classList.remove('hidden')"
+                    class="btn-primary py-2.5 px-6 text-sm">
+                    ⚡ Bayar Sekarang
+                </button>
+                @endif
                 @if ($order->canBeCancelled())
                 <button type="button" onclick="document.getElementById('cancel-modal').classList.remove('hidden')"
                     class="border border-red-300 text-red-600 hover:bg-red-50 py-2.5 px-5 rounded-xl text-sm font-medium transition">
                     Batalkan Pesanan
                 </button>
                 @endif
-                @elseif ($order->status === 'processing' && $order->canBeCancelled())
-                <button type="button" onclick="document.getElementById('cancel-modal').classList.remove('hidden')"
-                    class="border border-red-300 text-red-600 hover:bg-red-50 py-2.5 px-5 rounded-xl text-sm font-medium transition">
-                    Batalkan Pesanan
-                </button>
+                @elseif ($order->status === 'processing')
+                <span class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 text-sm font-medium">
+                    Pesanan sedang diproses dan tidak dapat dibatalkan
+                </span>
+                @elseif ($order->status === 'shipped')
+                    @if ($order->canConfirmReceived())
+                    <form action="{{ route('orders.complete', $order) }}" method="POST" onsubmit="return confirm('Konfirmasi bahwa pesanan sudah diterima?')">
+                        @csrf
+                        <button type="submit" class="btn-primary py-2.5 px-6 text-sm">
+                            ✓ Konfirmasi Sudah Menerima Pesanan
+                        </button>
+                    </form>
+                    @else
+                    <span class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 text-sm font-medium">
+                        Pesanan masih dalam proses pengiriman
+                    </span>
+                    @endif
+                <a href="https://wa.me/" target="_blank"
+                    class="inline-flex items-center gap-2 border border-gray-300 text-gray-700 hover:bg-gray-50 py-2.5 px-5 rounded-xl text-sm font-medium transition">
+                    💬 Chat Penjual
+                </a>
                 @elseif ($order->status === 'cancelled')
                 <form action="{{ route('orders.buy-again', $order) }}" method="POST">
                     @csrf
@@ -452,22 +470,114 @@
                 </a>
             </div>
 
+            {{-- Global Reviews for Products in this Order --}}
+            <div class="card p-6 mt-6">
+                <h3 class="font-bold text-gray-900 text-lg mb-6 flex items-center gap-2">
+                    <span class="text-2xl">💬</span>
+                    <span>Ulasan Produk dari Pembeli Lain</span>
+                </h3>
+
+                <div class="space-y-8">
+                    @foreach ($order->items as $item)
+                        <div class="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-herbal-50 flex items-center justify-center text-xl">🌿</div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800 text-sm">{{ $item->product->name }}</h4>
+                                    <div class="flex items-center gap-1 mt-0.5">
+                                        <div class="flex text-amber-400 text-xs">
+                                            @for($i=1; $i<=5; $i++)
+                                                <span>{{ $i <= round($item->product->rating) ? '★' : '☆' }}</span>
+                                            @endfor
+                                        </div>
+                                        <span class="text-xs text-gray-500">({{ $item->product->rating_count }} ulasan)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if($item->product->reviews->isEmpty())
+                                <p class="text-xs text-gray-400 italic">Belum ada ulasan untuk produk ini.</p>
+                            @else
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    @foreach($item->product->reviews as $review)
+                                        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                                            <div class="flex items-center justify-between gap-2 mb-2">
+                                                <span class="text-xs font-bold text-gray-700">{{ $review->reviewer_name ?? 'Pembeli' }}</span>
+                                                <span class="text-[10px] text-gray-400">{{ $review->created_at->format('d M Y') }}</span>
+                                            </div>
+                                        <div class="flex text-amber-400 text-[10px] mb-2">
+                                            @for($i=1; $i<=5; $i++)
+                                                <span>{{ $i <= $review->rating ? '★' : '☆' }}</span>
+                                            @endfor
+                                        </div>
+                                        @if ($review->comment)
+                                        <p class="text-xs text-gray-600 line-clamp-3 italic">"{{ $review->comment }}"</p>
+                                        @endif
+                                        @if ($review->image)
+                                        <img src="{{ Storage::url($review->image) }}" alt="Foto ulasan" class="mt-2 w-20 h-20 object-cover rounded-lg border border-gray-100">
+                                        @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
             @include('dashboard.review-modal')
 
-            {{-- Inline cancel modal --}}
+            {{-- Upload Proof Modal --}}
+            @if ($order->canUploadPaymentProof())
+            <div id="upload-proof-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                    <h3 class="font-bold text-gray-900 text-lg mb-2">Upload Bukti Pembayaran</h3>
+                    <p class="text-sm text-gray-500 mb-5">Unggah foto bukti transfer untuk mempercepat konfirmasi admin.</p>
+                    <form action="{{ route('orders.upload-proof', $order) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-5">
+                            <label class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-herbal-400 hover:bg-herbal-50 transition" id="upload-area">
+                                <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <span id="upload-text" class="text-sm text-gray-500">Klik untuk unggah foto (max 5MB)</span>
+                                <span id="file-name" class="text-sm font-medium text-herbal-700 mt-1 hidden"></span>
+                                <input type="file" name="proof_image" id="proof-input" accept="image/jpeg,image/png,image/webp" class="hidden" required>
+                            </label>
+                            @error('proof_image')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="flex gap-3">
+                            <button type="button" onclick="document.getElementById('upload-proof-modal').classList.add('hidden')"
+                                class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-xl text-sm hover:bg-gray-50">
+                                Batal
+                            </button>
+                            <button type="submit" id="submit-proof-btn"
+                                class="flex-1 bg-herbal-700 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-herbal-800 disabled:opacity-50" disabled>
+                                Upload Bukti
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            @endif
+
+            {{-- Cancel modal --}}
             @if ($order->canBeCancelled())
             <div id="cancel-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
                     <h3 class="font-bold text-gray-900 text-lg mb-4">Batalkan Pesanan</h3>
-                    <form action="{{ route('orders.cancel', $order) }}" method="POST">
+                    <form action="{{ route('orders.cancel', $order) }}" method="POST" onsubmit="return confirmCancel(event, this)">
                         @csrf
-                        <div class="space-y-2 mb-5">
-                            @foreach (['Salah memilih produk', 'Ingin mengubah alamat', 'Harga terlalu mahal', 'Estimasi pengiriman terlalu lama', 'Kendala pembayaran', 'Lainnya'] as $reason)
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50">
-                                <input type="radio" name="cancel_reason" value="{{ $reason }}" required class="text-red-500">
+                        <div class="space-y-2 mb-4">
+                            @foreach (['Berubah pikiran', 'Menemukan harga lebih murah', 'Salah memilih produk', 'Pengiriman terlalu lama', 'Lainnya'] as $reason)
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition" onclick="toggleOtherReason(this)">
+                                <input type="radio" name="cancel_reason" value="{{ $reason }}" required class="text-red-500 cancel-reason-radio">
                                 <span class="text-sm">{{ $reason }}</span>
                             </label>
                             @endforeach
+                        </div>
+                        <div id="other-reason-wrapper" class="hidden mb-4">
+                            <textarea name="other_reason" id="other-reason-input" rows="2" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 outline-none resize-none" placeholder="Tuliskan alasan Anda..."></textarea>
                         </div>
                         <div class="flex gap-3">
                             <button type="button" onclick="document.getElementById('cancel-modal').classList.add('hidden')"
@@ -484,6 +594,25 @@
             </div>
             @endif
 
+            {{-- Cancel Success Popup --}}
+            @if(session('cancel_success'))
+            <div id="cancel-success-popup" class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center animate-in fade-in zoom-in-95 duration-200">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-gray-900 text-lg mb-2">Pesanan Dibatalkan</h3>
+                    <p class="text-sm text-gray-600">Dana akan dikembalikan dan pesanan berhasil dibatalkan.</p>
+                    <button type="button" onclick="document.getElementById('cancel-success-popup').remove()"
+                        class="mt-6 w-full bg-herbal-700 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-herbal-800 transition">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+            @endif
+
             {{-- Inline cancel item modal --}}
             <div id="cancel-item-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -492,12 +621,15 @@
                     <form id="cancel-item-form" method="POST">
                         @csrf
                         <div class="space-y-2 mb-5">
-                            @foreach (['Salah memilih', 'Harga terlalu mahal', 'Ingin batal sebagian', 'Stok terbatas', 'Lainnya'] as $reason)
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50">
-                                <input type="radio" name="cancel_reason" value="{{ $reason }}" required class="text-red-500">
+                            @foreach (['Salah memilih produk', 'Harga terlalu mahal', 'Ingin batal sebagian', 'Pengiriman terlalu lama', 'Lainnya'] as $reason)
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50" onclick="toggleOtherReason(this)">
+                                <input type="radio" name="cancel_reason" value="{{ $reason }}" required class="text-red-500 cancel-reason-radio">
                                 <span class="text-sm">{{ $reason }}</span>
                             </label>
                             @endforeach
+                        </div>
+                        <div id="other-reason-wrapper" class="hidden mb-4">
+                            <textarea name="other_reason" rows="2" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:border-red-400 focus:ring-2 focus:ring-red-100 outline-none resize-none" placeholder="Tuliskan alasan Anda..."></textarea>
                         </div>
                         <div class="flex gap-3">
                             <button type="button" onclick="closeCancelItemModal()"
@@ -524,6 +656,82 @@
                 function closeCancelItemModal() {
                     document.getElementById('cancel-item-modal').classList.add('hidden');
                     document.getElementById('cancel-item-form').reset();
+                }
+
+                // Upload proof: show file name and enable button
+                document.getElementById('proof-input')?.addEventListener('change', function() {
+                    const fileName = document.getElementById('file-name');
+                    const uploadText = document.getElementById('upload-text');
+                    const submitBtn = document.getElementById('submit-proof-btn');
+                    const uploadArea = document.getElementById('upload-area');
+                    if (this.files.length > 0) {
+                        fileName.textContent = this.files[0].name;
+                        fileName.classList.remove('hidden');
+                        uploadText.textContent = 'Ganti file';
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove('disabled\\:opacity-50');
+                        uploadArea.classList.add('border-herbal-400', 'bg-herbal-50');
+                    }
+                });
+
+                // Toggle "Lainnya" textarea
+                function toggleOtherReason(label) {
+                    const radio = label.querySelector('.cancel-reason-radio');
+                    const wrapper = document.getElementById('other-reason-wrapper');
+                    const input = document.getElementById('other-reason-input');
+                    if (radio && radio.value === 'Lainnya') {
+                        wrapper.classList.remove('hidden');
+                        input.required = true;
+                    } else {
+                        wrapper.classList.add('hidden');
+                        input.required = false;
+                    }
+                }
+
+                // Confirm cancel with popup
+                function confirmCancel(event, form) {
+                    event.preventDefault();
+                    const formData = new FormData(form);
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    }).then(r => r.json()).then(data => {
+                        if (data.success) {
+                            document.getElementById('cancel-modal').classList.add('hidden');
+                            showCancelSuccess();
+                        } else {
+                            alert(data.error || 'Gagal membatalkan pesanan.');
+                        }
+                    }).catch(() => {
+                        // Fallback: submit normally if AJAX fails
+                        form.submit();
+                    });
+                    return false;
+                }
+
+                function showCancelSuccess() {
+                    const existing = document.getElementById('cancel-success-popup');
+                    if (existing) existing.remove();
+                    const div = document.createElement('div');
+                    div.id = 'cancel-success-popup';
+                    div.className = 'fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4';
+                    div.innerHTML = `
+                        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center animate-in fade-in zoom-in-95 duration-200">
+                            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <h3 class="font-bold text-gray-900 text-lg mb-2">Pesanan Dibatalkan</h3>
+                            <p class="text-sm text-gray-600">Dana akan dikembalikan dan pesanan berhasil dibatalkan.</p>
+                            <button type="button" onclick="this.closest('#cancel-success-popup').remove(); location.href='{{ route("orders.index") }}'"
+                                class="mt-6 w-full bg-herbal-700 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-herbal-800 transition">
+                                OK
+                            </button>
+                        </div>
+                    `;
+                    document.body.appendChild(div);
                 }
             </script>
         </div>

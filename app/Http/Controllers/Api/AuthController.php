@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Http\Traits\ApiResponseTrait;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
@@ -73,5 +76,51 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return $this->success(new UserResource($request->user()));
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => ['required', 'email', 'exists:users,email']]);
+
+        $token = Str::random(60);
+
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $request->email],
+            ['token' => Hash::make($token), 'created_at' => Carbon::now()]
+        );
+
+        return $this->success([
+            'reset_token' => $token,
+            'email' => $request->email,
+        ], 'Token reset password berhasil dibuat. Gunakan token ini untuk mereset password Anda.');
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => ['required', 'email', 'exists:users,email'],
+            'token' => ['required', 'string'],
+            'password' => ['required', 'confirmed', 'min:6', Password::defaults()],
+        ]);
+
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->first();
+
+        if (! $record || ! Hash::check($request->token, $record->token)) {
+            return $this->error('Token reset password tidak valid atau sudah kadaluarsa.', 400);
+        }
+
+        if (Carbon::parse($record->created_at)->addHours(1)->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            return $this->error('Token reset password sudah kadaluarsa.', 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        $user->update(['password' => Hash::make($request->password)]);
+
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return $this->success(null, 'Password berhasil direset. Silakan login dengan password baru.');
     }
 }

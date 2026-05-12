@@ -127,7 +127,7 @@
 
             {{-- Info pembelian tentang Super Admin --}}
             <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
-                <p class="font-semibold mb-2">ℹ️ Tentang Role Super Admin</p>
+                <p class="font-semibold mb-2"><i data-lucide="info" class="w-4 h-4 inline-block"></i> Tentang Role Super Admin</p>
                 <p class="text-blue-700">
                     Super Admin memiliki akses penuh termasuk manajemen admin, pengaturan keamanan, dan kontrol akses sistem.
                     Pastikan hanya pengguna terpercaya yang memiliki role ini.

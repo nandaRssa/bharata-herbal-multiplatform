@@ -44,14 +44,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF1E3A0F),
+                          color: Color(0xFF0F3D25),
                         ),
                       ),
                       IconButton(
                         onPressed: () => provider.loadInitialData(),
                         icon: const Icon(
                           Icons.refresh_rounded,
-                          color: Color(0xFF4A7C2C),
+                          color: Color(0xFF16A34A),
                         ),
                       ),
                     ],
@@ -102,7 +102,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     ),
                     child: const Icon(
                       Icons.tune_rounded,
-                      color: Color(0xFF2D5016),
+                      color: Color(0xFF1A5C38),
                     ),
                   ),
                 ],
@@ -137,12 +137,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       selectedColor: const Color(0xFFE8F5E9),
                       side: BorderSide(
                         color: isSelected
-                            ? const Color(0xFF2D5016)
+                            ? const Color(0xFF1A5C38)
                             : Colors.black12,
                       ),
                       labelStyle: TextStyle(
                         color: isSelected
-                            ? const Color(0xFF2D5016)
+                            ? const Color(0xFF1A5C38)
                             : Colors.black87,
                         fontWeight: isSelected
                             ? FontWeight.bold
@@ -202,7 +202,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
           const Icon(
             Icons.cloud_off_rounded,
             size: 80,
-            color: Color(0xFF2D5016),
+            color: Color(0xFF1A5C38),
           ),
           const SizedBox(height: 16),
           const Text(

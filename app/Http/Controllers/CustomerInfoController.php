@@ -12,12 +12,10 @@ class CustomerInfoController extends Controller
      */
     public function index()
     {
-        $storeSettings = \App\Models\Setting::getGroup('store') ?? [];
-        
-        return view('customer-info', [
-            'storeName' => $storeSettings['name'] ?? 'Bharata Herbal',
-            'storePhone' => $storeSettings['phone'] ?? '',
-            'storeEmail' => $storeSettings['email'] ?? '',
-        ]);
+        $storeName = \App\Models\Setting::get('store', 'store_name', 'Bharata Herbal');
+        $storePhone = \App\Models\Setting::get('store', 'whatsapp_number', '');
+        $storeEmail = \App\Models\Setting::get('store', 'business_email', '');
+
+        return view('customer-info', compact('storeName', 'storePhone', 'storeEmail'));
     }
 }

@@ -158,7 +158,7 @@
             @if ($product->benefits)
             <div class="card p-6">
                 <h3 class="text-lg font-bold text-herbal-800 mb-3 flex items-center gap-2">
-                    <span class="w-8 h-8 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-sm">✅</span>
+                    <span class="w-8 h-8 bg-green-100 text-green-700 rounded-full flex items-center justify-center"><i data-lucide="check" class="w-4 h-4"></i></span>
                     Berkhasiat Untuk
                 </h3>
                 <div class="prose max-w-none text-gray-700 leading-relaxed text-sm">
@@ -228,13 +228,26 @@
                 <div class="mt-6 space-y-4">
                     @forelse ($reviews as $review)
                         <div class="border border-gray-100 rounded-xl p-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <p class="text-sm font-semibold text-gray-800">{{ $review->reviewer_name ?? $review->user?->name ?? 'Pelanggan' }}</p>
-                                <p class="text-xs text-gray-400">{{ $review->created_at->format('d M Y') }}</p>
+                            <div class="flex items-center gap-3">
+                                @php $reviewer = $review->user; @endphp
+                                @if ($reviewer && $reviewer->avatar_url)
+                                <img src="{{ $reviewer->avatar_url }}" alt="" class="w-8 h-8 rounded-full object-cover">
+                                @else
+                                <div class="w-8 h-8 bg-herbal-100 rounded-full flex items-center justify-center">
+                                    <span class="text-herbal-700 font-semibold text-xs">{{ $reviewer?->initials ?? strtoupper(substr($review->reviewer_name ?? 'P', 0, 2)) }}</span>
+                                </div>
+                                @endif
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">{{ $review->reviewer_name ?? $reviewer?->name ?? 'Pelanggan' }}</p>
+                                    <p class="text-xs text-gray-400">{{ $review->created_at->format('d M Y') }}</p>
+                                </div>
+                                <div class="ml-auto flex items-center gap-1">
+                                    <span class="text-amber-500 text-sm">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</span>
+                                    <span class="text-xs text-gray-500 ml-1">({{ $review->rating }}/5)</span>
+                                </div>
                             </div>
-                            <p class="text-amber-500 text-sm mt-1">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</p>
                             @if ($review->comment)
-                                <p class="text-sm text-gray-600 mt-2 leading-relaxed">{{ $review->comment }}</p>
+                                <p class="text-sm text-gray-600 mt-3 leading-relaxed">{{ $review->comment }}</p>
                             @endif
                             @if ($review->image)
                                 <img src="{{ Storage::url($review->image) }}" alt="Foto ulasan" class="mt-3 w-32 h-32 object-cover rounded-lg border border-gray-100">

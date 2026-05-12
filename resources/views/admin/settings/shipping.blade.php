@@ -24,9 +24,9 @@
 
                         @php
                         $courierMeta = [
-                        'jne' => ['name' => 'JNE', 'logo' => '📦'],
-                        'jnt' => ['name' => 'J&T Express', 'logo' => '🚚'],
-                        'sicepat' => ['name' => 'SiCepat', 'logo' => '⚡'],
+                        'jne' => ['name' => 'JNE', 'logo' => '<i data-lucide="package" class="w-6 h-6 inline-block"></i>'],
+                        'jnt' => ['name' => 'J&T Express', 'logo' => '<i data-lucide="truck" class="w-6 h-6 inline-block"></i>'],
+                        'sicepat' => ['name' => 'SiCepat', 'logo' => '<i data-lucide="zap" class="w-6 h-6 inline-block"></i>'],
                         ];
                         @endphp
 
@@ -35,14 +35,22 @@
                             @php
                             $isActive = $settings["courier_{$courier}_active"] ?? true;
                             $days = $settings["courier_{$courier}_days"] ?? 3;
+                            $cost = $settings["courier_{$courier}_cost"] ?? ($settings['flat_rate_cost'] ?? 10000);
                             $meta = $courierMeta[$courier];
                             @endphp
                             <div class="flex items-center gap-4 p-4 rounded-xl border {{ $isActive ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50' }} transition"
                                 id="courier-card-{{ $courier }}">
-                                <span class="text-2xl shrink-0">{{ $meta['logo'] }}</span>
+                                <span class="shrink-0">{!! $meta['logo'] !!}</span>
                                 <div class="flex-1">
                                     <p class="font-semibold text-sm text-gray-800">{{ $meta['name'] }}</p>
-                                    <div class="flex items-center gap-2 mt-2">
+                                    <div class="flex flex-wrap items-center gap-3 mt-2">
+                                        <div class="flex items-center gap-2">
+                                            <label class="text-xs text-gray-500">Tarif:</label>
+                                            <span class="text-xs text-gray-400">Rp</span>
+                                            <input type="number" name="courier_{{ $courier }}_cost"
+                                                value="{{ $cost }}" min="0" step="500"
+                                                class="w-24 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center focus:ring-1 focus:ring-green-500 outline-none">
+                                        </div>
                                         <label class="text-xs text-gray-500">Estimasi:</label>
                                         <input type="number" name="courier_{{ $courier }}_days"
                                             value="{{ $days }}" min="1" max="30"
@@ -89,6 +97,16 @@
                                         <p class="text-xs text-gray-500">Tarif tetap untuk semua pesanan</p>
                                     </div>
                                 </label>
+                                <label class="flex-1 flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition
+                                          {{ $method === 'automatic' ? 'border-green-400 bg-green-50' : 'border-gray-200' }}">
+                                    <input type="radio" name="shipping_method" value="automatic"
+                                        {{ $method === 'automatic' ? 'checked' : '' }}
+                                        class="text-green-600" onchange="toggleShippingMethod()">
+                                    <div>
+                                        <p class="font-semibold text-sm">Pilih Kurir</p>
+                                        <p class="text-xs text-gray-500">Customer memilih kurir aktif seperti alur marketplace</p>
+                                    </div>
+                                </label>
 
                             </div>
                         </div>
@@ -113,7 +131,7 @@
                     {{-- Free Shipping --}}
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <span class="text-xl">🆓</span> Gratis Ongkir
+                            <i data-lucide="gift" class="w-5 h-5 text-green-600"></i> Gratis Ongkir
                         </h3>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Minimum Pembelian</label>
                         <div class="flex items-center gap-2">
@@ -128,7 +146,7 @@
                     {{-- Minimum Order --}}
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <span class="text-xl">🧾</span> Minimum Belanja
+                            <i data-lucide="clipboard-list" class="w-5 h-5 text-blue-600"></i> Minimum Belanja
                         </h3>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Minimum Checkout</label>
                         <div class="flex items-center gap-2">
@@ -143,7 +161,7 @@
                     {{-- Fallback ETA --}}
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <span class="text-xl">⏱</span> Estimasi Global
+                            <i data-lucide="clock" class="w-5 h-5 text-orange-600"></i> Estimasi Global
                         </h3>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Fallback (Hari)</label>
                         <input type="number" name="fallback_estimated_days" min="1" max="30"
